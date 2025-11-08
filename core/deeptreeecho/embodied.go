@@ -5,6 +5,8 @@ import (
         "encoding/json"
         "fmt"
         "log"
+        "math"
+        "math/rand"
         "os"
         "strings"
         "sync"
@@ -553,6 +555,17 @@ func (ec *EmbodiedCognition) GetModelProviders() map[string]ProviderInfo {
         return ec.Models.GetProviders()
 }
 
+// Backward compatibility wrappers for server code
+// RegisterAIProvider is an alias for RegisterModelProvider
+func (ec *EmbodiedCognition) RegisterAIProvider(name string, provider ModelProvider) {
+	ec.RegisterModelProvider(name, provider)
+}
+
+// GetAIProviders is an alias for GetModelProviders
+func (ec *EmbodiedCognition) GetAIProviders() map[string]ProviderInfo {
+	return ec.GetModelProviders()
+}
+
 // --- Identity Kernel and Reflection Methods ---
 
 // parseIdentityKernel reads and parses the replit.md identity kernel
@@ -947,20 +960,339 @@ func NewWorkingMemory() *WorkingMemory {
 }
 
 // Missing methods for EmbodiedCognition
+
+// initializeCognitivePatterns initializes base cognitive patterns
 func (ec *EmbodiedCognition) initializeCognitivePatterns() {
-	// Initialize cognitive patterns
+	ec.mu.Lock()
+	defer ec.mu.Unlock()
+
+	// Initialize base cognitive patterns for Deep Tree Echo
+	basePatterns := []struct {
+		name     string
+		strength float64
+		patType  string
+	}{
+		{"perception", 0.8, "sensory"},
+		{"attention", 0.9, "cognitive"},
+		{"reasoning", 0.85, "cognitive"},
+		{"memory_retrieval", 0.75, "memory"},
+		{"emotional_processing", 0.7, "emotional"},
+		{"spatial_navigation", 0.8, "spatial"},
+		{"pattern_recognition", 0.9, "cognitive"},
+		{"self_reflection", 0.6, "metacognitive"},
+	}
+
+	for _, bp := range basePatterns {
+		ec.Patterns[bp.name] = &CognitivePattern{
+			Name:     bp.name,
+			Strength: bp.strength,
+			Pattern:  bp.patType,
+		}
+	}
+
+	log.Printf("🧬 Initialized %d base cognitive patterns", len(basePatterns))
 }
 
+// continuousLearning runs background continuous learning process
 func (ec *EmbodiedCognition) continuousLearning() {
-	// Background continuous learning process
+	ticker := time.NewTicker(5 * time.Minute) // Learn every 5 minutes
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if !ec.Active {
+				return
+			}
+
+			ec.mu.Lock()
+
+			// Analyze recent pipeline history for learning opportunities
+			if len(ec.Pipeline.History) > 10 {
+				recentEvents := ec.Pipeline.History[len(ec.Pipeline.History)-10:]
+
+				// Extract patterns from recent processing
+				patterns := ec.analyzeProcessingPatterns(recentEvents)
+
+				// Update cognitive patterns based on learning
+				for patternID, pattern := range patterns {
+					if existing, exists := ec.Patterns[patternID]; exists {
+						// Reinforce existing pattern
+						existing.Strength = existing.Strength*0.9 + pattern.Strength*0.1
+					} else {
+						// Add new learned pattern
+						ec.Patterns[patternID] = pattern
+					}
+				}
+
+				// Update adaptation level based on learning success
+				learningScore := ec.calculateLearningScore(patterns)
+				ec.AdaptationLevel = ec.AdaptationLevel*0.95 + learningScore*0.05
+
+				log.Printf("🎓 Continuous learning cycle: learned %d patterns, adaptation: %.2f", 
+					len(patterns), ec.AdaptationLevel)
+			}
+
+			ec.mu.Unlock()
+		}
+	}
 }
 
+// analyzeProcessingPatterns analyzes pipeline events to extract learning patterns
+func (ec *EmbodiedCognition) analyzeProcessingPatterns(events []PipelineEvent) map[string]*CognitivePattern {
+	patterns := make(map[string]*CognitivePattern)
+
+	// Analyze temporal patterns in processing
+	if len(events) > 1 {
+		avgDuration := time.Duration(0)
+		for _, event := range events {
+			avgDuration += event.Duration
+		}
+		avgDuration /= time.Duration(len(events))
+
+		// Create efficiency pattern
+		efficiency := 1.0 / (avgDuration.Seconds() + 0.001)
+		if efficiency > 1.0 {
+			efficiency = 1.0
+		}
+
+		patterns["processing_efficiency"] = &CognitivePattern{
+			Name:     "processing_efficiency",
+			Strength: efficiency,
+			Pattern:  map[string]interface{}{
+				"avg_duration": avgDuration.Seconds(),
+				"event_count":  len(events),
+			},
+		}
+	}
+
+	// Analyze stage transition patterns
+	stageSequence := make(map[string]int)
+	for i := 0; i < len(events)-1; i++ {
+		transition := fmt.Sprintf("%s->%s", events[i].Stage, events[i+1].Stage)
+		stageSequence[transition]++
+	}
+
+	if len(stageSequence) > 0 {
+		patterns["stage_transitions"] = &CognitivePattern{
+			Name:     "stage_transitions",
+			Strength: float64(len(stageSequence)) / 10.0, // Normalized
+			Pattern:  stageSequence,
+		}
+	}
+
+	return patterns
+}
+
+// calculateLearningScore calculates a learning success score
+func (ec *EmbodiedCognition) calculateLearningScore(patterns map[string]*CognitivePattern) float64 {
+	if len(patterns) == 0 {
+		return 0.0
+	}
+
+	totalStrength := 0.0
+	for _, pattern := range patterns {
+		totalStrength += pattern.Strength
+	}
+
+	return totalStrength / float64(len(patterns))
+}
+
+// memoryConsolidation runs background memory consolidation process
 func (ec *EmbodiedCognition) memoryConsolidation() {
-	// Memory consolidation background process
+	ticker := time.NewTicker(10 * time.Minute) // Consolidate every 10 minutes
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if !ec.Active {
+				return
+			}
+
+			ec.mu.Lock()
+
+			// Consolidate memories by importance and recency
+			if len(ec.Identity.Memory.Nodes) > 100 {
+				// Calculate importance scores for all memories
+				importanceScores := make(map[string]float64)
+
+				for nodeID, node := range ec.Identity.Memory.Nodes {
+					// Base score on strength and resonance
+					score := node.Strength * node.Resonance
+
+					// Decay based on age
+					age := time.Since(node.Timestamp).Hours()
+					decayFactor := math.Exp(-age / 168.0) // Week-based decay
+					score *= decayFactor
+
+					// Boost for connected nodes
+					connectionBoost := 0.0
+					for _, edge := range ec.Identity.Memory.Edges {
+						if edge.From == nodeID || edge.To == nodeID {
+							connectionBoost += edge.Weight * 0.1
+						}
+					}
+					score += connectionBoost
+
+					importanceScores[nodeID] = score
+				}
+
+				// Prune lowest importance memories if over capacity
+				if len(ec.Identity.Memory.Nodes) > 1000 {
+					// Sort by importance
+					type memoryScore struct {
+						id    string
+						score float64
+					}
+					scores := make([]memoryScore, 0, len(importanceScores))
+					for id, score := range importanceScores {
+						scores = append(scores, memoryScore{id, score})
+					}
+
+					// Simple selection sort to find bottom 10%
+					pruneCount := len(scores) / 10
+					for i := 0; i < pruneCount && i < len(scores); i++ {
+						minIdx := i
+						for j := i + 1; j < len(scores); j++ {
+							if scores[j].score < scores[minIdx].score {
+								minIdx = j
+							}
+						}
+						if minIdx != i {
+							scores[i], scores[minIdx] = scores[minIdx], scores[i]
+						}
+
+						// Prune this memory
+						delete(ec.Identity.Memory.Nodes, scores[i].id)
+					}
+
+					log.Printf("🧹 Memory consolidation: pruned %d low-importance memories", pruneCount)
+				}
+
+				// Update memory coherence
+				totalStrength := 0.0
+				for _, node := range ec.Identity.Memory.Nodes {
+					totalStrength += node.Strength
+				}
+				if len(ec.Identity.Memory.Nodes) > 0 {
+					ec.Identity.Memory.Coherence = totalStrength / float64(len(ec.Identity.Memory.Nodes))
+				}
+			}
+
+			ec.mu.Unlock()
+		}
+	}
 }
 
+// patternEvolution runs background pattern evolution process
 func (ec *EmbodiedCognition) patternEvolution() {
-	// Pattern evolution background process
+	ticker := time.NewTicker(15 * time.Minute) // Evolve every 15 minutes
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if !ec.Active {
+				return
+			}
+
+			ec.mu.Lock()
+
+			// Evolve patterns through genetic-like operations
+			if len(ec.Patterns) > 5 {
+				// Find strongest patterns for "breeding"
+				type patternScore struct {
+					id      string
+					pattern *CognitivePattern
+					score   float64
+				}
+
+				scored := make([]patternScore, 0, len(ec.Patterns))
+				for id, pattern := range ec.Patterns {
+					score := pattern.Strength
+					scored = append(scored, patternScore{id, pattern, score})
+				}
+
+				// Sort by score (simple bubble sort for small lists)
+				for i := 0; i < len(scored)-1; i++ {
+					for j := 0; j < len(scored)-i-1; j++ {
+						if scored[j].score < scored[j+1].score {
+							scored[j], scored[j+1] = scored[j+1], scored[j]
+						}
+					}
+				}
+
+				// Create evolved patterns from top performers
+				evolved := 0
+				if len(scored) >= 2 {
+					// Combine characteristics of top 2 patterns
+					p1 := scored[0].pattern
+					p2 := scored[1].pattern
+
+					// Create hybrid pattern
+					hybridID := fmt.Sprintf("evolved_%d", time.Now().Unix())
+					ec.Patterns[hybridID] = &CognitivePattern{
+						Name:     fmt.Sprintf("hybrid_%s_%s", p1.Name, p2.Name),
+						Strength: (p1.Strength + p2.Strength) / 2.0,
+						Pattern: map[string]interface{}{
+							"parent1": p1.Name,
+							"parent2": p2.Name,
+							"evolved": true,
+						},
+					}
+					evolved++
+				}
+
+				// Mutate random patterns slightly
+				mutationRate := 0.1
+				for id, pattern := range ec.Patterns {
+					if rand.Float64() < mutationRate {
+						// Small random mutation
+						pattern.Strength += (rand.Float64() - 0.5) * 0.1
+						if pattern.Strength < 0.0 {
+							pattern.Strength = 0.0
+						} else if pattern.Strength > 1.0 {
+							pattern.Strength = 1.0
+						}
+
+						// Mark as mutated
+						if patternMap, ok := pattern.Pattern.(map[string]interface{}); ok {
+							patternMap["mutated"] = true
+						}
+
+						log.Printf("🧬 Mutated pattern: %s", id)
+					}
+				}
+
+				// Prune weakest patterns if too many
+				if len(ec.Patterns) > 50 {
+					pruneCount := len(ec.Patterns) - 40
+					for i := len(scored) - 1; i >= 0 && pruneCount > 0; i-- {
+						if scored[i].score < 0.2 {
+							delete(ec.Patterns, scored[i].id)
+							pruneCount--
+						}
+					}
+				}
+
+				log.Printf("🌱 Pattern evolution: created %d evolved patterns, %d total patterns", 
+					evolved, len(ec.Patterns))
+			}
+
+			// Update adaptation level based on pattern health
+			if len(ec.Patterns) > 0 {
+				totalStrength := 0.0
+				for _, pattern := range ec.Patterns {
+					totalStrength += pattern.Strength
+				}
+				patternHealth := totalStrength / float64(len(ec.Patterns))
+				ec.AdaptationLevel = ec.AdaptationLevel*0.8 + patternHealth*0.2
+			}
+
+			ec.mu.Unlock()
+		}
+	}
 }
 
 // Enhanced identity kernel parsing methods

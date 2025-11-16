@@ -34,12 +34,12 @@ type PersonaActivation struct {
 	Timestamp   time.Time
 	Persona     PersonaArchetype
 	Reason      string
-	State       *CognitiveState
+	State       *PersonaCognitiveState
 	Duration    time.Duration
 }
 
-// CognitiveState captures the state that triggered persona activation
-type CognitiveState struct {
+// PersonaCognitiveState captures the state that triggered persona activation
+type PersonaCognitiveState struct {
 	Coherence     float64
 	PatternCount  int
 	Iterations    uint64
@@ -86,8 +86,8 @@ func (pm *PersonaManager) DetermineActivePersona(identity *Identity) PersonaArch
 }
 
 // extractCognitiveState extracts current cognitive state from identity
-func (pm *PersonaManager) extractCognitiveState(identity *Identity) *CognitiveState {
-	state := &CognitiveState{
+func (pm *PersonaManager) extractCognitiveState(identity *Identity) *PersonaCognitiveState {
+	state := &PersonaCognitiveState{
 		Coherence:    identity.Coherence,
 		PatternCount: len(identity.Patterns),
 		Iterations:   identity.Iterations,
@@ -102,7 +102,7 @@ func (pm *PersonaManager) extractCognitiveState(identity *Identity) *CognitiveSt
 }
 
 // calculateOrdoScore calculates how strongly Ordo persona should activate
-func (pm *PersonaManager) calculateOrdoScore(state *CognitiveState) float64 {
+func (pm *PersonaManager) calculateOrdoScore(state *PersonaCognitiveState) float64 {
 	score := 0.0
 	
 	// High cognitive load → activate Ordo for stability
@@ -134,7 +134,7 @@ func (pm *PersonaManager) calculateOrdoScore(state *CognitiveState) float64 {
 }
 
 // calculateChaoScore calculates how strongly Chao persona should activate
-func (pm *PersonaManager) calculateChaoScore(state *CognitiveState) float64 {
+func (pm *PersonaManager) calculateChaoScore(state *PersonaCognitiveState) float64 {
 	score := 0.0
 	
 	// Low pattern diversity → activate Chao for exploration
@@ -166,7 +166,7 @@ func (pm *PersonaManager) calculateChaoScore(state *CognitiveState) float64 {
 }
 
 // getActivationReason generates human-readable reason for persona activation
-func (pm *PersonaManager) getActivationReason(state *CognitiveState, ordoScore, chaoScore float64) string {
+func (pm *PersonaManager) getActivationReason(state *PersonaCognitiveState, ordoScore, chaoScore float64) string {
 	if ordoScore > chaoScore {
 		reasons := []string{}
 		if state.Coherence < 0.6 {
@@ -207,7 +207,7 @@ func (pm *PersonaManager) getActivationReason(state *CognitiveState, ordoScore, 
 }
 
 // recordActivation records a persona activation event
-func (pm *PersonaManager) recordActivation(persona PersonaArchetype, state *CognitiveState, reason string) {
+func (pm *PersonaManager) recordActivation(persona PersonaArchetype, state *PersonaCognitiveState, reason string) {
 	activation := PersonaActivation{
 		Timestamp: time.Now(),
 		Persona:   persona,

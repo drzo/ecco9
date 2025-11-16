@@ -1,6 +1,8 @@
 module github.com/EchoCog/echollama
 
-go 1.21
+go 1.23.0
+
+toolchain go1.24.10
 
 require (
 	github.com/containerd/console v1.0.3

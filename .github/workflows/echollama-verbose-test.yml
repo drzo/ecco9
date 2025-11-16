@@ -9,6 +9,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Tidy Go Modules
+        run: go mod tidy
+
       - name: Build echollama
         run: go build -o echollama .
 

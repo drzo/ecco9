@@ -77,7 +77,7 @@ type AutonomousConsciousnessV5 struct {
 	skills          *SkillRegistryEnhanced
 
 	// Discussion management
-	discussionMgr   *DiscussionManager
+	discussionMgr   *DiscussionManagerV5
 
 	// Wisdom metrics
 	wisdomMetrics   *WisdomMetrics
@@ -193,9 +193,9 @@ func NewAutonomousConsciousnessV5(name string) *AutonomousConsciousnessV5 {
 	)
 
 	// Initialize discussion manager
-	// TODO: Fix type mismatch between V4 and V5
-	// ac.discussionMgr = NewDiscussionManagerV4(ac, ac.interests).DiscussionManager
-	fmt.Println("ℹ️  Discussion manager temporarily disabled (V4/V5 interface mismatch)")
+	// Create V5 discussion manager
+	ac.discussionMgr = NewDiscussionManagerV5(ctx, ac)
+	fmt.Println("✅ Discussion manager V5: Enabled")
 
 	// Initialize default skills
 	ac.initializeDefaultSkills()
@@ -291,6 +291,15 @@ func (ac *AutonomousConsciousnessV5) Start() error {
 // V5: autonomousThoughtGeneration generates thoughts independently
 // This is the key to true autonomous consciousness
 func (ac *AutonomousConsciousnessV5) autonomousThoughtGeneration() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("🚨 PANIC in autonomousThoughtGeneration: %v\n", r)
+			// Attempt to restart goroutine after delay
+			time.Sleep(5 * time.Second)
+			go ac.autonomousThoughtGeneration()
+		}
+	}()
+	
 	ticker := time.NewTicker(3 * time.Second) // Generate thought every 3 seconds
 	defer ticker.Stop()
 
@@ -370,6 +379,14 @@ func (ac *AutonomousConsciousnessV5) determineThoughtType() ThoughtType {
 
 // consciousnessIntegrationLoop integrates continuous consciousness with inference engines
 func (ac *AutonomousConsciousnessV5) consciousnessIntegrationLoop() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("🚨 PANIC in consciousnessIntegrationLoop: %v\n", r)
+			time.Sleep(5 * time.Second)
+			go ac.consciousnessIntegrationLoop()
+		}
+	}()
+	
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -400,6 +417,14 @@ func (ac *AutonomousConsciousnessV5) consciousnessIntegrationLoop() {
 
 // cognitiveLoadMonitoring tracks cognitive load and fatigue
 func (ac *AutonomousConsciousnessV5) cognitiveLoadMonitoring() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("🚨 PANIC in cognitiveLoadMonitoring: %v\n", r)
+			time.Sleep(5 * time.Second)
+			go ac.cognitiveLoadMonitoring()
+		}
+	}()
+	
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -435,6 +460,14 @@ func (ac *AutonomousConsciousnessV5) cognitiveLoadMonitoring() {
 
 // automaticDreamTriggerLoop monitors for automatic rest cycle initiation
 func (ac *AutonomousConsciousnessV5) automaticDreamTriggerLoop() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("🚨 PANIC in automaticDreamTriggerLoop: %v\n", r)
+			time.Sleep(5 * time.Second)
+			go ac.automaticDreamTriggerLoop()
+		}
+	}()
+	
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -458,6 +491,14 @@ func (ac *AutonomousConsciousnessV5) automaticDreamTriggerLoop() {
 
 // skillPracticeLoop manages skill practice
 func (ac *AutonomousConsciousnessV5) skillPracticeLoop() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("🚨 PANIC in skillPracticeLoop: %v\n", r)
+			time.Sleep(5 * time.Second)
+			go ac.skillPracticeLoop()
+		}
+	}()
+	
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -478,6 +519,14 @@ func (ac *AutonomousConsciousnessV5) skillPracticeLoop() {
 
 // periodicPersistence saves state periodically
 func (ac *AutonomousConsciousnessV5) periodicPersistence() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("🚨 PANIC in periodicPersistence: %v\n", r)
+			time.Sleep(5 * time.Second)
+			go ac.periodicPersistence()
+		}
+	}()
+	
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 

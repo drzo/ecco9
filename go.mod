@@ -24,6 +24,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/nlpodyssey/gopickle v0.3.0
 	github.com/pdevine/tensor v0.0.0-20240510204454-f88f4562727c
+	github.com/supabase-community/postgrest-go v0.0.11
 	github.com/supabase-community/supabase-go v0.0.4
 	golang.org/x/image v0.16.0
 	golang.org/x/tools v0.16.1
@@ -46,7 +47,6 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/supabase-community/functions-go v0.0.0-20220927045802-22373e6cb51d // indirect
 	github.com/supabase-community/gotrue-go v1.2.0 // indirect
-	github.com/supabase-community/postgrest-go v0.0.11 // indirect
 	github.com/supabase-community/storage-go v0.7.0 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/xtgo/set v1.0.0 // indirect

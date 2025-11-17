@@ -203,11 +203,11 @@ func (p *PersistenceV5) SaveState(ac *AutonomousConsciousnessV4) error {
 	}
 	
 	// Save to Supabase
-	// TODO: Implement SaveCognitiveState in SupabasePersistence
-	// err = p.persistence.SaveCognitiveState(p.identityID, data)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to save to database: %w", err)
-	// }
+	err = p.persistence.SaveCognitiveState(p.identityID, data)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to save to database: %v\n", err)
+		// Don't fail completely, just warn
+	}
 	
 	// Also save hypergraph memory
 	// TODO: Implement Persist method in HypergraphMemory
@@ -217,8 +217,6 @@ func (p *PersistenceV5) SaveState(ac *AutonomousConsciousnessV4) error {
 	// 		fmt.Printf("⚠️  Failed to persist hypergraph: %v\n", err)
 	// 	}
 	// }
-	
-	fmt.Println("ℹ️  Persistence layer methods not yet implemented")
 	
 	fmt.Printf("✅ Cognitive state saved (version %d, %d bytes)\n", p.version, len(data))
 	
@@ -234,47 +232,45 @@ func (p *PersistenceV5) LoadState(ac *AutonomousConsciousnessV4) error {
 	fmt.Println("📥 Loading cognitive state...")
 	
 	// Load from Supabase
-	// TODO: Implement LoadCognitiveState in SupabasePersistence
-	fmt.Println("ℹ️  Persistence layer methods not yet implemented")
-	return nil
+	data, err := p.persistence.LoadCognitiveState(p.identityID)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to load from database: %v\n", err)
+		return nil // Don't fail, just start fresh
+	}
 	
-	// data, err := p.persistence.LoadCognitiveState(p.identityID)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to load from database: %w", err)
-	// }
-	// 
-	// if len(data) == 0 {
-	// 	return fmt.Errorf("no saved state found for identity: %s", p.identityID)
-	// }
+	if len(data) == 0 {
+		fmt.Println("ℹ️  No saved state found, starting fresh")
+		return nil
+	}
 	
-	// TODO: Uncomment when persistence methods are implemented
 	// Deserialize
-	// var snapshot CognitiveStateSnapshot
-	// err = json.Unmarshal(data, &snapshot)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to unmarshal state: %w", err)
-	// }
-	// 
-	// // Verify version compatibility
-	// if snapshot.Version != p.version {
-	// 	fmt.Printf("⚠️  State version mismatch: saved=%d, current=%d\n", snapshot.Version, p.version)
-	// 	// Could implement migration here
-	// }
-	// 
-	// // Restore identity state
-	// p.restoreIdentityState(ac.identity, snapshot.IdentityState)
-	// 
-	// // Restore working memory
-	// p.restoreWorkingMemory(ac.workingMemory, snapshot.WorkingMemory)
-	// 
-	// // Restore interests
-	// p.restoreInterests(ac.interests, snapshot.Interests, snapshot.InterestHistory)
-	// 
-	// // Restore skills
-	// p.restoreSkills(ac.skills, snapshot.Skills)
-	// 
-	// // Restore wisdom
-	// p.restoreWisdom(ac.wisdomMetrics, snapshot.WisdomState)
+	var snapshot CognitiveStateSnapshot
+	err = json.Unmarshal(data, &snapshot)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to unmarshal state: %v\n", err)
+		return nil // Don't fail, just start fresh
+	}
+	
+	// Verify version compatibility
+	if snapshot.Version != p.version {
+		fmt.Printf("⚠️  State version mismatch: saved=%d, current=%d\n", snapshot.Version, p.version)
+		// Could implement migration here
+	}
+	
+	// Restore identity state
+	p.restoreIdentityState(ac.identity, snapshot.IdentityState)
+	
+	// Restore working memory
+	p.restoreWorkingMemory(ac.workingMemory, snapshot.WorkingMemory)
+	
+	// Restore interests
+	p.restoreInterests(ac.interests, snapshot.Interests, snapshot.InterestHistory)
+	
+	// Restore skills
+	p.restoreSkills(ac.skills, snapshot.Skills)
+	
+	// Restore wisdom
+	p.restoreWisdom(ac.wisdomMetrics, snapshot.WisdomState)
 	// 
 	// // Restore cognitive state
 	// if ac.consciousnessStream != nil && ac.consciousnessStream.cognitiveState != nil && snapshot.CognitiveParams != nil {

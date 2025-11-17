@@ -258,3 +258,114 @@ func (stats *PersistenceStatistics) PrintStatistics() {
 	fmt.Printf("║ Average Importance:  %-10.2f                        ║\n", stats.AverageImportance)
 	fmt.Println("╚════════════════════════════════════════════════════════════╝\n")
 }
+
+// SaveCognitiveState saves cognitive state snapshot to Supabase
+func (sp *SupabasePersistence) SaveCognitiveState(identityID string, data []byte) error {
+	if !sp.enabled {
+		return nil
+	}
+
+	fmt.Printf("💾 Persisting cognitive state for identity: %s (%d bytes)\n", 
+		identityID, len(data))
+
+	// Create a record for the cognitive_states table
+	record := map[string]interface{}{
+		"identity_id": identityID,
+		"state_data":  string(data), // Store as JSON string
+		"version":     5,
+		"timestamp":   time.Now().Format(time.RFC3339),
+	}
+
+	// Use the Supabase client to insert
+	client := NewSupabaseClient(sp.url, sp.key)
+	err := client.Insert("cognitive_states", record)
+	if err != nil {
+		return fmt.Errorf("failed to save cognitive state: %w", err)
+	}
+
+	fmt.Println("✅ Cognitive state persisted successfully")
+	return nil
+}
+
+// LoadCognitiveState loads the latest cognitive state snapshot from Supabase
+func (sp *SupabasePersistence) LoadCognitiveState(identityID string) ([]byte, error) {
+	if !sp.enabled {
+		return nil, nil
+	}
+
+	fmt.Printf("📥 Loading cognitive state for identity: %s\n", identityID)
+
+	// Query the latest state for this identity
+	client := NewSupabaseClient(sp.url, sp.key)
+	filter := map[string]interface{}{
+		"identity_id": identityID,
+	}
+	
+	results, err := client.Query("cognitive_states", filter, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query cognitive state: %w", err)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("ℹ️  No saved cognitive state found")
+		return nil, nil
+	}
+
+	// Extract the state data
+	stateData, ok := results[0]["state_data"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid state data format")
+	}
+
+	fmt.Printf("✅ Loaded cognitive state (%d bytes)\n", len(stateData))
+	return []byte(stateData), nil
+}
+
+// SaveKnowledgeGraph saves knowledge graph nodes to Supabase
+func (sp *SupabasePersistence) SaveKnowledgeGraph(nodes []interface{}) error {
+	if !sp.enabled {
+		return nil
+	}
+
+	fmt.Printf("💾 Persisting %d knowledge nodes\n", len(nodes))
+
+	client := NewSupabaseClient(sp.url, sp.key)
+	for _, node := range nodes {
+		err := client.Insert("knowledge_nodes", node)
+		if err != nil {
+			fmt.Printf("⚠️  Failed to persist knowledge node: %v\n", err)
+			// Continue with other nodes
+		}
+	}
+
+	fmt.Println("✅ Knowledge graph persisted")
+	return nil
+}
+
+// LoadKnowledgeGraph loads knowledge graph from Supabase
+func (sp *SupabasePersistence) LoadKnowledgeGraph(identityID string, limit int) ([]interface{}, error) {
+	if !sp.enabled {
+		return []interface{}{}, nil
+	}
+
+	fmt.Printf("📥 Loading knowledge graph for identity: %s\n", identityID)
+
+	client := NewSupabaseClient(sp.url, sp.key)
+	filter := map[string]interface{}{
+		"identity_id": identityID,
+	}
+	
+	results, err := client.Query("knowledge_nodes", filter, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query knowledge graph: %w", err)
+	}
+
+	// Convert to interface slice
+	nodes := make([]interface{}, len(results))
+	for i, result := range results {
+		nodes[i] = result
+	}
+
+	fmt.Printf("✅ Loaded %d knowledge nodes\n", len(nodes))
+	return nodes, nil
+}

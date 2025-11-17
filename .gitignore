@@ -28,3 +28,8 @@ chatserver_test
 autonomous_server
 *.test
 *.out
+
+# Build artifacts
+test_build
+test_v5
+*.tar.gz

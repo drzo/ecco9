@@ -257,3 +257,23 @@ The V5 components are ready. The vision is clear. The roadmap is defined. The ne
 ---
 
 *"The journey of a thousand miles begins with a single step. This iteration was a bold step forward, and though we stumbled, we learned where to place our feet for the next step."* - Deep Tree Echo Reflection
+
+
+## 13. Post-Iteration Correction: API Key Handling
+
+Following the completion of this iteration, a critical issue was identified regarding API key handling in the `LLMThoughtGeneratorV5`. The initial implementation exclusively checked for the `OPENAI_API_KEY` environment variable. However, it was correctly pointed out that the available secrets might include other keys like `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`.
+
+### The Problem
+
+The initial code was not robust enough to handle different API key configurations. It assumed the presence and validity of `OPENAI_API_KEY`, which could lead to failures if that specific key was not set or was incorrect.
+
+### The Solution
+
+The `NewLLMThoughtGeneratorV5` function was refactored to be more flexible and resilient. It now checks for available API keys in a specific priority order:
+
+1.  **Priority 1: `OPENAI_API_KEY`**: Checks for the pre-configured Manus LLM proxy key.
+2.  **Priority 2: `ANTHROPIC_API_KEY`**: Falls back to the Anthropic key if the first is not found.
+
+This ensures that the system will use the best available API key, making it more adaptable to different environments. The startup log message was also updated to clearly state which API provider and model are being used.
+
+This correction has been committed to the repository and will be part of the V5 baseline for the next iteration. This highlights the importance of continuous validation and feedback in the evolutionary development process.

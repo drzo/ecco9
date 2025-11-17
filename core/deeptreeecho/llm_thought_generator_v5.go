@@ -53,13 +53,38 @@ type LLMThoughtGeneratorV5 struct {
 
 // NewLLMThoughtGeneratorV5 creates a new V5 thought generator with real LLM integration
 func NewLLMThoughtGeneratorV5(ctx context.Context) *LLMThoughtGeneratorV5 {
-	apiKey := os.Getenv("OPENAI_API_KEY")
+	// Try to find an available API key in priority order
+	apiKey := ""
+	baseURL := ""
+	model := ""
+	apiProvider := ""
+	
+	// Priority 1: Check for pre-configured OPENAI_API_KEY (Manus LLM proxy)
+	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
+		apiKey = key
+		baseURL = os.Getenv("OPENAI_BASE_URL")
+		if baseURL == "" {
+			baseURL = "https://api.openai.com/v1"
+		}
+		model = "gpt-4.1-mini"
+		apiProvider = "OpenAI/Manus Proxy"
+	}
+	
+	// Priority 2: Check for ANTHROPIC_API_KEY
+	if apiKey == "" {
+		if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
+			apiKey = key
+			baseURL = "https://api.anthropic.com/v1"
+			model = "claude-3-haiku-20240307" // Fast and cost-effective
+			apiProvider = "Anthropic"
+		}
+	}
 	
 	generator := &LLMThoughtGeneratorV5{
 		ctx:              ctx,
 		apiKey:           apiKey,
-		baseURL:          os.Getenv("OPENAI_BASE_URL"), // Pre-configured in environment
-		model:            "gpt-4.1-mini", // Fast and cost-effective
+		baseURL:          baseURL,
+		model:            model,
 		enabled:          apiKey != "",
 		contextWindow:    7,
 		temperature:      0.8, // High creativity
@@ -77,9 +102,10 @@ func NewLLMThoughtGeneratorV5(ctx context.Context) *LLMThoughtGeneratorV5 {
 	generator.initializeThoughtPrompts()
 	
 	if generator.enabled {
-		fmt.Println("✅ LLM Thought Generator V5: Enabled with OpenAI API")
+		fmt.Printf("✅ LLM Thought Generator V5: Enabled with %s (model: %s)\n", apiProvider, model)
 	} else {
-		fmt.Println("⚠️  LLM Thought Generator V5: Running in fallback mode (no API key)")
+		fmt.Println("⚠️  LLM Thought Generator V5: Running in fallback mode (no API key found)")
+		fmt.Println("   Checked: OPENAI_API_KEY, ANTHROPIC_API_KEY")
 	}
 	
 	return generator

@@ -22,11 +22,11 @@ type AnthropicProvider struct {
 
 // AnthropicRequest represents a request to Claude API
 type AnthropicRequest struct {
-	Model       string              `json:"model"`
-	MaxTokens   int                 `json:"max_tokens"`
-	Temperature float64             `json:"temperature,omitempty"`
-	System      string              `json:"system,omitempty"`
-	Messages    []AnthropicMessage  `json:"messages"`
+	Model       string             `json:"model"`
+	MaxTokens   int                `json:"max_tokens"`
+	Temperature float64            `json:"temperature,omitempty"`
+	System      string             `json:"system,omitempty"`
+	Messages    []AnthropicMessage `json:"messages"`
 }
 
 // AnthropicMessage represents a message in the conversation
@@ -44,9 +44,9 @@ type AnthropicResponse struct {
 		Type string `json:"type"`
 		Text string `json:"text"`
 	} `json:"content"`
-	Model        string `json:"model"`
-	StopReason   string `json:"stop_reason"`
-	Usage        struct {
+	Model      string `json:"model"`
+	StopReason string `json:"stop_reason"`
+	Usage      struct {
 		InputTokens  int `json:"input_tokens"`
 		OutputTokens int `json:"output_tokens"`
 	} `json:"usage"`
@@ -57,11 +57,11 @@ func NewAnthropicProvider(apiKey string, model string) *AnthropicProvider {
 	if apiKey == "" {
 		apiKey = os.Getenv("ANTHROPIC_API_KEY")
 	}
-	
+
 	if model == "" {
 		model = "claude-3-5-sonnet-20241022" // Latest Claude 3.5 Sonnet
 	}
-	
+
 	return &AnthropicProvider{
 		apiKey:  apiKey,
 		model:   model,
@@ -76,7 +76,7 @@ func NewAnthropicProvider(apiKey string, model string) *AnthropicProvider {
 func (ap *AnthropicProvider) Generate(ctx context.Context, req LLMRequest) (*LLMResponse, error) {
 	// Build messages from context and user prompt
 	messages := make([]AnthropicMessage, 0, len(req.Context)+1)
-	
+
 	// Add conversation context
 	for _, msg := range req.Context {
 		messages = append(messages, AnthropicMessage{
@@ -84,28 +84,28 @@ func (ap *AnthropicProvider) Generate(ctx context.Context, req LLMRequest) (*LLM
 			Content: msg.Content,
 		})
 	}
-	
+
 	// Add user prompt
 	messages = append(messages, AnthropicMessage{
 		Role:    "user",
 		Content: req.UserPrompt,
 	})
-	
+
 	// Manage context window - Claude 3.5 Sonnet supports 200K tokens
 	// Keep approximately 180K for input, 20K for output
 	messages = ap.manageContextWindow(messages, 180000)
-	
+
 	// Build request
 	maxTokens := req.MaxTokens
 	if maxTokens == 0 {
 		maxTokens = 1024
 	}
-	
+
 	temperature := req.Temperature
 	if temperature == 0 {
 		temperature = 0.7
 	}
-	
+
 	anthropicReq := AnthropicRequest{
 		Model:       ap.model,
 		MaxTokens:   maxTokens,
@@ -113,19 +113,19 @@ func (ap *AnthropicProvider) Generate(ctx context.Context, req LLMRequest) (*LLM
 		System:      req.SystemPrompt,
 		Messages:    messages,
 	}
-	
+
 	// Make API call
 	response, err := ap.callAPI(ctx, anthropicReq)
 	if err != nil {
 		return nil, fmt.Errorf("claude api call failed: %w", err)
 	}
-	
+
 	// Extract text from response
 	var content string
 	if len(response.Content) > 0 {
 		content = response.Content[0].Text
 	}
-	
+
 	return &LLMResponse{
 		Content:      content,
 		Model:        response.Model,
@@ -141,42 +141,42 @@ func (ap *AnthropicProvider) callAPI(ctx context.Context, req AnthropicRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
-	
+
 	// Create HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", ap.baseURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	// Set headers
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("x-api-key", ap.apiKey)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
-	
+
 	// Make request
 	httpResp, err := ap.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	defer httpResp.Body.Close()
-	
+
 	// Read response
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
-	
+
 	// Check status code
 	if httpResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("api error (status %d): %s", httpResp.StatusCode, string(body))
 	}
-	
+
 	// Parse response
 	var response AnthropicResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	return &response, nil
 }
 
@@ -186,18 +186,18 @@ func (ap *AnthropicProvider) manageContextWindow(messages []AnthropicMessage, ma
 	estimateTokens := func(text string) int {
 		return len(text) / 4
 	}
-	
+
 	// Calculate total tokens
 	totalTokens := 0
 	for _, msg := range messages {
 		totalTokens += estimateTokens(msg.Content)
 	}
-	
+
 	// If under limit, return as-is
 	if totalTokens <= maxTokens {
 		return messages
 	}
-	
+
 	// Strategy: Keep first message (context setter) and most recent messages
 	if len(messages) <= 2 {
 		// Truncate the content of messages if too few to remove
@@ -215,10 +215,10 @@ func (ap *AnthropicProvider) manageContextWindow(messages []AnthropicMessage, ma
 		}
 		return truncated
 	}
-	
+
 	// Keep first and last messages, remove from middle
 	result := []AnthropicMessage{messages[0]}
-	
+
 	// Calculate how many recent messages we can keep
 	recentTokens := estimateTokens(messages[0].Content)
 	for i := len(messages) - 1; i > 0; i-- {
@@ -229,7 +229,7 @@ func (ap *AnthropicProvider) manageContextWindow(messages []AnthropicMessage, ma
 		result = append([]AnthropicMessage{messages[i]}, result...)
 		recentTokens += msgTokens
 	}
-	
+
 	// Add truncation notice if we removed messages
 	if len(result) < len(messages) {
 		truncationNotice := AnthropicMessage{
@@ -238,7 +238,7 @@ func (ap *AnthropicProvider) manageContextWindow(messages []AnthropicMessage, ma
 		}
 		result = append([]AnthropicMessage{result[0], truncationNotice}, result[1:]...)
 	}
-	
+
 	return result
 }
 
@@ -269,7 +269,7 @@ Do not explain or meta-comment. Just generate the raw thought itself.`
 		}
 		contextStr = "\n\nCurrent context:\n" + strings.Join(contextParts, "\n")
 	}
-	
+
 	req := LLMRequest{
 		SystemPrompt: systemPrompt,
 		UserPrompt:   prompt + contextStr,
@@ -277,15 +277,15 @@ Do not explain or meta-comment. Just generate the raw thought itself.`
 		MaxTokens:    150,
 		Context:      []Message{},
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	response, err := ap.Generate(ctx, req)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return strings.TrimSpace(response.Content), nil
 }
 
@@ -303,7 +303,7 @@ Generate only the insight itself, no preamble or explanation.`
 
 	thoughtsStr := strings.Join(thoughts, "\n- ")
 	userPrompt := fmt.Sprintf("Recent thoughts:\n- %s\n\nWhat insight emerges from these thoughts?", thoughtsStr)
-	
+
 	req := LLMRequest{
 		SystemPrompt: systemPrompt,
 		UserPrompt:   userPrompt,
@@ -311,15 +311,15 @@ Generate only the insight itself, no preamble or explanation.`
 		MaxTokens:    200,
 		Context:      []Message{},
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	response, err := ap.Generate(ctx, req)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return strings.TrimSpace(response.Content), nil
 }
 
@@ -336,7 +336,7 @@ Based on the given context, generate a genuine question that reflects:
 Generate only the question itself, no preamble.`
 
 	userPrompt := fmt.Sprintf("Context: %s\n\nWhat question arises from this?", contextStr)
-	
+
 	req := LLMRequest{
 		SystemPrompt: systemPrompt,
 		UserPrompt:   userPrompt,
@@ -344,24 +344,24 @@ Generate only the question itself, no preamble.`
 		MaxTokens:    100,
 		Context:      []Message{},
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	response, err := ap.Generate(ctx, req)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return strings.TrimSpace(response.Content), nil
 }
 
 // GetModelInfo returns information about the model being used
 func (ap *AnthropicProvider) GetModelInfo() map[string]interface{} {
 	return map[string]interface{}{
-		"provider":      "anthropic",
-		"model":         ap.model,
+		"provider":       "anthropic",
+		"model":          ap.model,
 		"context_window": 200000,
-		"capabilities":  []string{"reasoning", "reflection", "philosophy", "long_context"},
+		"capabilities":   []string{"reasoning", "reflection", "philosophy", "long_context"},
 	}
 }

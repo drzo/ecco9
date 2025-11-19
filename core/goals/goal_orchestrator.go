@@ -120,6 +120,7 @@ type Action struct {
 // NewGoalOrchestrator creates a new goal orchestration system
 func NewGoalOrchestrator(identityKernel map[string]interface{}, persistencePath string) *GoalOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
+	
 
 	orchestrator := &GoalOrchestrator{
 		ctx:             ctx,
@@ -133,6 +134,7 @@ func NewGoalOrchestrator(identityKernel map[string]interface{}, persistencePath 
 
 	// Load persisted goals
 	orchestrator.loadState()
+	
 
 	return orchestrator
 }
@@ -146,6 +148,7 @@ func (g *GoalOrchestrator) Start() error {
 	}
 	g.running = true
 	g.mu.Unlock()
+	
 
 	fmt.Println("🎯 Goal Orchestrator: Starting autonomous goal-directed behavior...")
 
@@ -154,6 +157,7 @@ func (g *GoalOrchestrator) Start() error {
 	go g.goalPursuitLoop()
 	go g.progressMonitoringLoop()
 	go g.persistenceLoop()
+	
 
 	return nil
 }
@@ -162,6 +166,17 @@ func (g *GoalOrchestrator) Start() error {
 func (g *GoalOrchestrator) Stop() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	
+	if !g.running {
+		return fmt.Errorf("goal orchestrator not running")
+	}
+	
+	g.running = false
+	g.cancel()
+	
+	// Final persistence
+	g.persistState()
+	
 
 	if !g.running {
 		return fmt.Errorf("goal orchestrator not running")
@@ -185,6 +200,7 @@ func (g *GoalOrchestrator) goalGenerationLoop() {
 
 	// Generate initial goals
 	g.generateGoalsFromIdentity()
+	
 
 	for {
 		select {
@@ -200,6 +216,7 @@ func (g *GoalOrchestrator) goalGenerationLoop() {
 func (g *GoalOrchestrator) generateGoalsFromIdentity() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	
 
 	// Check if we already have enough active goals
 	if len(g.activeGoals) >= 5 {
@@ -285,6 +302,10 @@ func (g *GoalOrchestrator) generateGoalsFromIdentity() {
 
 			// Decompose into milestones
 			g.decomposGoalIntoMilestones(goal)
+			
+			g.activeGoals = append(g.activeGoals, goal)
+			g.goalsGenerated++
+			
 
 			g.activeGoals = append(g.activeGoals, goal)
 			g.goalsGenerated++
@@ -341,6 +362,7 @@ func (g *GoalOrchestrator) goalPursuitLoop() {
 func (g *GoalOrchestrator) pursueActiveGoals() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	
 
 	for _, goal := range g.activeGoals {
 		if goal.Status == StatusPlanned {
@@ -386,6 +408,7 @@ func (g *GoalOrchestrator) progressMonitoringLoop() {
 func (g *GoalOrchestrator) updateGoalProgress() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	
 
 	for _, goal := range g.activeGoals {
 		// Calculate progress based on completed milestones
@@ -417,6 +440,7 @@ func (g *GoalOrchestrator) completeGoal(goal *Goal) {
 	// Move to completed goals
 	g.completedGoals = append(g.completedGoals, goal)
 	g.goalsCompleted++
+	
 
 	// Remove from active goals
 	for i, ag := range g.activeGoals {
@@ -433,6 +457,7 @@ func (g *GoalOrchestrator) completeGoal(goal *Goal) {
 func (g *GoalOrchestrator) RecordActionResult(goalID string, actionID string, result string, success bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	
 
 	for _, goal := range g.activeGoals {
 		if goal.ID == goalID {
@@ -465,6 +490,7 @@ func (g *GoalOrchestrator) RecordActionResult(goalID string, actionID string, re
 func (g *GoalOrchestrator) GetActiveGoals() []*Goal {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+	
 
 	return g.activeGoals
 }
@@ -473,6 +499,14 @@ func (g *GoalOrchestrator) GetActiveGoals() []*Goal {
 func (g *GoalOrchestrator) GetMetrics() map[string]interface{} {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+	
+	return map[string]interface{}{
+		"goals_generated":  g.goalsGenerated,
+		"goals_completed":  g.goalsCompleted,
+		"goals_abandoned":  g.goalsAbandoned,
+		"active_goals":     len(g.activeGoals),
+		"completed_goals":  len(g.completedGoals),
+		"abandoned_goals":  len(g.abandonedGoals),
 
 	return map[string]interface{}{
 		"goals_generated": g.goalsGenerated,
@@ -503,12 +537,20 @@ func (g *GoalOrchestrator) persistenceLoop() {
 func (g *GoalOrchestrator) persistState() {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+	
 
 	if g.persistencePath == "" {
 		return
 	}
 
 	state := map[string]interface{}{
+		"active_goals":     g.activeGoals,
+		"completed_goals":  g.completedGoals,
+		"abandoned_goals":  g.abandonedGoals,
+		"goals_generated":  g.goalsGenerated,
+		"goals_completed":  g.goalsCompleted,
+		"goals_abandoned":  g.goalsAbandoned,
+		"last_persisted":   time.Now(),
 		"active_goals":    g.activeGoals,
 		"completed_goals": g.completedGoals,
 		"abandoned_goals": g.abandonedGoals,
@@ -523,6 +565,7 @@ func (g *GoalOrchestrator) persistState() {
 		fmt.Printf("⚠️  Failed to marshal goal state: %v\n", err)
 		return
 	}
+	
 
 	if err := os.WriteFile(g.persistencePath, data, 0644); err != nil {
 		fmt.Printf("⚠️  Failed to persist goal state: %v\n", err)
@@ -533,6 +576,7 @@ func (g *GoalOrchestrator) loadState() {
 	if g.persistencePath == "" {
 		return
 	}
+	
 
 	data, err := os.ReadFile(g.persistencePath)
 	if err != nil {

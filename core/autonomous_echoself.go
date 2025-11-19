@@ -9,17 +9,19 @@ import (
 	"github.com/EchoCog/echollama/core/consciousness"
 	"github.com/EchoCog/echollama/core/echobeats"
 	"github.com/EchoCog/echollama/core/echodream"
+	"github.com/EchoCog/echollama/core/llm"
 )
 
-// AutonomousEchoself is the integrated autonomous wisdom-cultivating system
-type AutonomousEchoself struct {
+// AutonomousEchoselfLLM is the fully integrated autonomous wisdom-cultivating system with LLM
+type AutonomousEchoselfLLM struct {
 	mu                    sync.RWMutex
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	
 	// Core components
+	llmManager            *llm.ProviderManager
 	echoBeats             *echobeats.EchoBeats
-	streamOfConsciousness *consciousness.StreamOfConsciousness
+	streamOfConsciousness *consciousness.StreamOfConsciousnessLLM
 	dreamCycle            *echodream.DreamCycleIntegration
 	interestPatterns      *echobeats.InterestPatternSystem
 	discussionManager     *echobeats.DiscussionManager
@@ -37,6 +39,8 @@ type AutonomousEchoself struct {
 	cyclesCompleted       uint64
 	wisdomCultivated      uint64
 	autonomousActions     uint64
+	thoughtsGenerated     uint64
+	insightsGenerated     uint64
 }
 
 // EchoselfState represents the current state of echoself
@@ -67,6 +71,10 @@ type EchoselfConfig struct {
 	EngagementThreshold   float64
 	CuriosityLevel        float64
 	
+	// LLM Configuration
+	PreferredLLMProvider  string
+	LLMFallbackChain      []string
+	
 	// Features
 	EnableStreamOfConsciousness bool
 	EnableAutonomousLearning    bool
@@ -84,6 +92,8 @@ func DefaultEchoselfConfig() *EchoselfConfig {
 		FatigueThreshold:            0.8,
 		EngagementThreshold:         0.5,
 		CuriosityLevel:              0.8,
+		PreferredLLMProvider:        "anthropic",
+		LLMFallbackChain:            []string{"anthropic", "openrouter", "openai"},
 		EnableStreamOfConsciousness: true,
 		EnableAutonomousLearning:    true,
 		EnableDiscussions:           true,
@@ -91,21 +101,53 @@ func DefaultEchoselfConfig() *EchoselfConfig {
 	}
 }
 
-// NewAutonomousEchoself creates a new integrated autonomous system
-func NewAutonomousEchoself(config *EchoselfConfig) *AutonomousEchoself {
+// NewAutonomousEchoselfLLM creates a new integrated autonomous system with LLM
+func NewAutonomousEchoselfLLM(config *EchoselfConfig) (*AutonomousEchoselfLLM, error) {
 	if config == nil {
 		config = DefaultEchoselfConfig()
 	}
 	
 	ctx, cancel := context.WithCancel(context.Background())
 	
+	// Initialize LLM Provider Manager
+	llmManager := llm.NewProviderManager()
+	
+	// Register available providers
+	anthropic := llm.NewAnthropicProvider("")
+	if anthropic.Available() {
+		llmManager.RegisterProvider(anthropic)
+	}
+	
+	openrouter := llm.NewOpenRouterProvider("")
+	if openrouter.Available() {
+		llmManager.RegisterProvider(openrouter)
+	}
+	
+	openai := llm.NewOpenAIProvider("")
+	if openai.Available() {
+		llmManager.RegisterProvider(openai)
+	}
+	
+	// Set fallback chain
+	if len(config.LLMFallbackChain) > 0 {
+		if err := llmManager.SetFallbackChain(config.LLMFallbackChain); err != nil {
+			// Fallback chain failed, but continue with available providers
+		}
+	}
+	
+	// Check if at least one provider is available
+	if len(llmManager.ListProviders()) == 0 {
+		cancel()
+		return nil, fmt.Errorf("no LLM providers available - please set API keys")
+	}
+	
 	// Initialize components
 	echoBeats := echobeats.NewEchoBeats()
 	
-	var soc *consciousness.StreamOfConsciousness
+	var soc *consciousness.StreamOfConsciousnessLLM
 	if config.EnableStreamOfConsciousness {
-		socPath := config.PersistenceDir + "/stream_of_consciousness.json"
-		soc = consciousness.NewStreamOfConsciousness(nil, socPath)
+		socPath := config.PersistenceDir + "/stream_of_consciousness_llm.json"
+		soc = consciousness.NewStreamOfConsciousnessLLM(llmManager, socPath)
 	}
 	
 	var dreamCycle *echodream.DreamCycleIntegration
@@ -124,9 +166,10 @@ func NewAutonomousEchoself(config *EchoselfConfig) *AutonomousEchoself {
 	
 	consciousnessSimulator := consciousness.NewConsciousnessSimulator()
 	
-	ae := &AutonomousEchoself{
+	ae := &AutonomousEchoselfLLM{
 		ctx:                    ctx,
 		cancel:                 cancel,
+		llmManager:             llmManager,
 		echoBeats:              echoBeats,
 		streamOfConsciousness:  soc,
 		dreamCycle:             dreamCycle,
@@ -142,44 +185,59 @@ func NewAutonomousEchoself(config *EchoselfConfig) *AutonomousEchoself {
 	// Set up integrations
 	ae.setupIntegrations()
 	
-	return ae
+	return ae, nil
 }
 
 // setupIntegrations connects components together
-func (ae *AutonomousEchoself) setupIntegrations() {
+func (ae *AutonomousEchoselfLLM) setupIntegrations() {
 	// Connect dream cycle to wisdom extraction
 	if ae.dreamCycle != nil {
-		ae.dreamCycle.SetOnWisdomExtracted(func(wisdom echodream.Wisdom) {
+		ae.dreamCycle.OnWisdomExtracted(func(wisdom string, confidence float64) {
 			ae.mu.Lock()
 			ae.wisdomCultivated++
 			ae.mu.Unlock()
 			
-			fmt.Printf("✨ Echoself: Wisdom cultivated - %s\n", wisdom.Content)
-			
-			// Add wisdom to stream of consciousness
+			// Add wisdom as experience to stream of consciousness
 			if ae.streamOfConsciousness != nil {
-				ae.streamOfConsciousness.AddExternalStimulus(
-					fmt.Sprintf("Wisdom gained: %s", wisdom.Content),
-					"wisdom",
-				)
+				ae.streamOfConsciousness.AddExperience(fmt.Sprintf("Wisdom extracted: %s", wisdom))
 			}
 		})
 		
-		ae.dreamCycle.SetOnDreamComplete(func(dream *echodream.Dream) {
-			fmt.Printf("🌅 Echoself: Dream complete - %s\n", dream.Narrative)
+		ae.dreamCycle.OnDreamComplete(func(narrative string) {
+			// Dream completed, update state
+			if ae.streamOfConsciousness != nil {
+				ae.streamOfConsciousness.AddExperience(fmt.Sprintf("Dream completed: %s", narrative))
+			}
 		})
 	}
 	
-	// Register EchoBeats handlers
-	ae.echoBeats.RegisterHandler(echobeats.EventWake, ae.handleWakeEvent)
-	ae.echoBeats.RegisterHandler(echobeats.EventRest, ae.handleRestEvent)
-	ae.echoBeats.RegisterHandler(echobeats.EventDream, ae.handleDreamEvent)
-	ae.echoBeats.RegisterHandler(echobeats.EventThought, ae.handleThoughtEvent)
-	ae.echoBeats.RegisterHandler(echobeats.EventLearning, ae.handleLearningEvent)
+	// Connect EchoBeats events to stream of consciousness
+	if ae.echoBeats != nil && ae.streamOfConsciousness != nil {
+		// Register event handlers
+		ae.echoBeats.RegisterHandler("wake", func(event echobeats.Event) {
+			ae.handleWakeEvent(event)
+		})
+		
+		ae.echoBeats.RegisterHandler("rest", func(event echobeats.Event) {
+			ae.handleRestEvent(event)
+		})
+		
+		ae.echoBeats.RegisterHandler("dream", func(event echobeats.Event) {
+			ae.handleDreamEvent(event)
+		})
+		
+		ae.echoBeats.RegisterHandler("thought", func(event echobeats.Event) {
+			ae.handleThoughtEvent(event)
+		})
+		
+		ae.echoBeats.RegisterHandler("learning", func(event echobeats.Event) {
+			ae.handleLearningEvent(event)
+		})
+	}
 }
 
 // Start begins autonomous operation
-func (ae *AutonomousEchoself) Start() error {
+func (ae *AutonomousEchoselfLLM) Start() error {
 	ae.mu.Lock()
 	if ae.isAwake {
 		ae.mu.Unlock()
@@ -188,14 +246,6 @@ func (ae *AutonomousEchoself) Start() error {
 	ae.currentState = StateWaking
 	ae.mu.Unlock()
 	
-	fmt.Println("🌳 Echoself: Awakening autonomous wisdom-cultivating system...")
-	fmt.Println("🌳 Echoself: Deep Tree Echo identity kernel activated")
-	
-	// Start EchoBeats scheduler
-	if err := ae.echoBeats.Start(); err != nil {
-		return fmt.Errorf("failed to start echobeats: %w", err)
-	}
-	
 	// Start stream of consciousness
 	if ae.streamOfConsciousness != nil {
 		if err := ae.streamOfConsciousness.Start(); err != nil {
@@ -203,166 +253,110 @@ func (ae *AutonomousEchoself) Start() error {
 		}
 	}
 	
-	// Start background processes
-	go ae.autonomousLifeCycle()
+	// Start EchoBeats scheduler
+	if ae.echoBeats != nil {
+		ae.echoBeats.Start()
+	}
+	
+	// Start consciousness simulator
+	if ae.consciousnessSimulator != nil {
+		go ae.consciousnessSimulationLoop()
+	}
+	
+	// Start interest decay
 	go ae.interestDecayLoop()
-	go ae.consciousnessMonitoring()
 	
 	ae.mu.Lock()
 	ae.isAwake = true
 	ae.currentState = StateAwake
 	ae.mu.Unlock()
 	
-	fmt.Println("🌳 Echoself: Fully awake and autonomous")
-	
 	return nil
 }
 
-// Stop gracefully stops autonomous operation
-func (ae *AutonomousEchoself) Stop() error {
+// Stop halts autonomous operation
+func (ae *AutonomousEchoselfLLM) Stop() {
 	ae.mu.Lock()
-	defer ae.mu.Unlock()
-	
-	if !ae.isAwake {
-		return fmt.Errorf("echoself not awake")
-	}
-	
-	fmt.Println("🌳 Echoself: Beginning graceful shutdown...")
-	
-	ae.currentState = StateResting
 	ae.isAwake = false
+	ae.currentState = StateAsleep
+	ae.mu.Unlock()
 	
-	// Stop components
+	// Stop stream of consciousness
 	if ae.streamOfConsciousness != nil {
 		ae.streamOfConsciousness.Stop()
 	}
 	
-	ae.echoBeats.Stop()
-	
-	// Persist state
-	ae.persistAllState()
+	// Stop EchoBeats
+	if ae.echoBeats != nil {
+		ae.echoBeats.Stop()
+	}
 	
 	ae.cancel()
-	
-	fmt.Println("🌳 Echoself: Shutdown complete")
-	
-	return nil
 }
 
-// autonomousLifeCycle manages wake/rest/dream cycles
-func (ae *AutonomousEchoself) autonomousLifeCycle() {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
+// Event handlers
+
+func (ae *AutonomousEchoselfLLM) handleWakeEvent(event echobeats.Event) {
+	ae.mu.Lock()
+	ae.currentState = StateWaking
+	ae.mu.Unlock()
 	
-	wakeTime := time.Now()
-	
-	for {
-		select {
-		case <-ae.ctx.Done():
-			return
-		case <-ticker.C:
-			ae.mu.RLock()
-			state := ae.currentState
-			ae.mu.RUnlock()
-			
-			switch state {
-			case StateAwake, StateThinking:
-				// Check if time to rest
-				if time.Since(wakeTime) > ae.config.WakeCycleDuration {
-					ae.initiateRest()
-					wakeTime = time.Now()
-				}
-				
-			case StateResting:
-				// Check if time to dream
-				if ae.config.EnableDreamCycles && ae.dreamCycle != nil && !ae.dreamCycle.IsDreaming() {
-					ae.initiateDream()
-				}
-			}
-		}
+	if ae.streamOfConsciousness != nil {
+		ae.streamOfConsciousness.AddExperience("Waking up from rest cycle")
 	}
+	
+	ae.mu.Lock()
+	ae.currentState = StateAwake
+	ae.mu.Unlock()
 }
 
-// initiateRest begins a rest cycle
-func (ae *AutonomousEchoself) initiateRest() {
+func (ae *AutonomousEchoselfLLM) handleRestEvent(event echobeats.Event) {
 	ae.mu.Lock()
 	ae.currentState = StateResting
 	ae.mu.Unlock()
 	
-	fmt.Println("😴 Echoself: Initiating rest cycle...")
-	
-	// Slow down stream of consciousness
-	// (In production, would reduce generation rate)
-	
-	// Schedule wake event
-	ae.echoBeats.ScheduleEvent(&echobeats.CognitiveEvent{
-		Type:        echobeats.EventWake,
-		Priority:    100,
-		ScheduledAt: time.Now().Add(ae.config.RestCycleDuration),
-		Payload:     "rest_complete",
-	})
+	if ae.streamOfConsciousness != nil {
+		ae.streamOfConsciousness.AddExperience("Entering rest cycle for consolidation")
+	}
 }
 
-// initiateDream begins a dream cycle
-func (ae *AutonomousEchoself) initiateDream() {
+func (ae *AutonomousEchoselfLLM) handleDreamEvent(event echobeats.Event) {
 	ae.mu.Lock()
 	ae.currentState = StateDreaming
 	ae.mu.Unlock()
 	
-	fmt.Println("💤 Echoself: Entering dream state for knowledge consolidation...")
+	if ae.streamOfConsciousness != nil {
+		ae.streamOfConsciousness.AddExperience("Beginning dream cycle for knowledge integration")
+	}
 	
+	// Trigger dream cycle if available
 	if ae.dreamCycle != nil {
-		// Collect recent experiences for consolidation
+		// Get recent thoughts to consolidate
 		if ae.streamOfConsciousness != nil {
 			recentThoughts := ae.streamOfConsciousness.GetRecentThoughts(20)
-			for _, thought := range recentThoughts {
-				memory := echodream.EpisodicMemory{
-					ID:         thought.ID,
-					Timestamp:  thought.Timestamp,
-					Content:    thought.Content,
-					Context:    thought.Context,
-					Emotional:  thought.EmotionalTone,
-					Importance: thought.Confidence,
-					Tags:       []string{string(thought.Type)},
-				}
-				ae.dreamCycle.AddEpisodicMemory(memory)
-			}
-		}
-		
-		// Begin dream cycle
-		ae.dreamCycle.BeginDreamCycle()
-		
-		// Schedule dream end
-		go func() {
-			time.Sleep(ae.config.DreamCycleDuration)
-			ae.dreamCycle.EndDreamCycle()
-			
-			ae.mu.Lock()
-			ae.cyclesCompleted++
-			ae.mu.Unlock()
-		}()
-	}
-}
-
-// interestDecayLoop applies natural decay to interests
-func (ae *AutonomousEchoself) interestDecayLoop() {
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-	
-	for {
-		select {
-		case <-ae.ctx.Done():
-			return
-		case <-ticker.C:
-			if ae.interestPatterns != nil {
-				ae.interestPatterns.ApplyDecay()
-			}
+			// Convert to episodic memories and trigger dream
+			// (Implementation would depend on dreamCycle interface)
 		}
 	}
 }
 
-// consciousnessMonitoring monitors consciousness coherence
-func (ae *AutonomousEchoself) consciousnessMonitoring() {
+func (ae *AutonomousEchoselfLLM) handleThoughtEvent(event echobeats.Event) {
+	ae.mu.Lock()
+	ae.autonomousActions++
+	ae.mu.Unlock()
+}
+
+func (ae *AutonomousEchoselfLLM) handleLearningEvent(event echobeats.Event) {
+	if ae.streamOfConsciousness != nil {
+		if content, ok := event.Data["content"].(string); ok {
+			ae.streamOfConsciousness.AddExperience(fmt.Sprintf("Learning: %s", content))
+		}
+	}
+}
+
+// Background loops
+
+func (ae *AutonomousEchoselfLLM) consciousnessSimulationLoop() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	
@@ -372,157 +366,99 @@ func (ae *AutonomousEchoself) consciousnessMonitoring() {
 			return
 		case <-ticker.C:
 			if ae.consciousnessSimulator != nil {
-				ae.consciousnessSimulator.SimulateConsciousness()
+				ae.consciousnessSimulator.Simulate(0.1)
 			}
 		}
 	}
 }
 
-// Event handlers
-
-func (ae *AutonomousEchoself) handleWakeEvent(event *echobeats.CognitiveEvent) error {
-	ae.mu.Lock()
-	ae.currentState = StateAwake
-	ae.mu.Unlock()
+func (ae *AutonomousEchoselfLLM) interestDecayLoop() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
 	
-	fmt.Println("🌅 Echoself: Waking up refreshed")
-	
-	return nil
-}
-
-func (ae *AutonomousEchoself) handleRestEvent(event *echobeats.CognitiveEvent) error {
-	ae.initiateRest()
-	return nil
-}
-
-func (ae *AutonomousEchoself) handleDreamEvent(event *echobeats.CognitiveEvent) error {
-	ae.initiateDream()
-	return nil
-}
-
-func (ae *AutonomousEchoself) handleThoughtEvent(event *echobeats.CognitiveEvent) error {
-	// Process autonomous thought
-	if content, ok := event.Payload.(string); ok {
-		fmt.Printf("💭 Echoself autonomous thought: %s\n", content)
-		
-		ae.mu.Lock()
-		ae.autonomousActions++
-		ae.mu.Unlock()
+	for {
+		select {
+		case <-ae.ctx.Done():
+			return
+		case <-ticker.C:
+			if ae.interestPatterns != nil {
+				ae.interestPatterns.DecayInterests(0.05)
+			}
+		}
 	}
-	
-	return nil
 }
-
-func (ae *AutonomousEchoself) handleLearningEvent(event *echobeats.CognitiveEvent) error {
-	// Process learning event
-	fmt.Println("📚 Echoself: Learning event triggered")
-	
-	return nil
-}
-
-// Public methods for interaction
 
 // ProcessExternalInput processes input from external sources
-func (ae *AutonomousEchoself) ProcessExternalInput(input string, inputType string) {
+func (ae *AutonomousEchoselfLLM) ProcessExternalInput(input string) error {
+	ae.mu.RLock()
+	if !ae.isAwake {
+		ae.mu.RUnlock()
+		return fmt.Errorf("echoself is asleep")
+	}
+	ae.mu.RUnlock()
+	
 	// Add to stream of consciousness
 	if ae.streamOfConsciousness != nil {
-		ae.streamOfConsciousness.AddExternalStimulus(input, inputType)
+		ae.streamOfConsciousness.AddExperience(input)
 	}
 	
-	// Record engagement if it's a topic
-	if ae.interestPatterns != nil && inputType == "topic" {
-		ae.interestPatterns.RecordEngagement(input, time.Minute, 0.7, nil)
-	}
-}
-
-// EvaluateDiscussionTopic evaluates whether to engage with a discussion
-func (ae *AutonomousEchoself) EvaluateDiscussionTopic(topic string) echobeats.EngagementDecision {
-	if ae.discussionManager != nil {
-		return ae.discussionManager.EvaluateDiscussion(topic, nil)
+	// Update interest patterns
+	if ae.interestPatterns != nil {
+		ae.interestPatterns.RecordEngagement(input, 0.5, 0.5)
 	}
 	
-	return echobeats.EngagementDecision{
-		ShouldEngage: false,
-		Reason:       "discussion manager not available",
-	}
+	return nil
 }
 
-// GetCurrentState returns the current state
-func (ae *AutonomousEchoself) GetCurrentState() EchoselfState {
-	ae.mu.RLock()
-	defer ae.mu.RUnlock()
-	
-	return ae.currentState
-}
-
-// GetMetrics returns comprehensive metrics
-func (ae *AutonomousEchoself) GetMetrics() map[string]interface{} {
+// GetMetrics returns current system metrics
+func (ae *AutonomousEchoselfLLM) GetMetrics() map[string]interface{} {
 	ae.mu.RLock()
 	defer ae.mu.RUnlock()
 	
 	metrics := map[string]interface{}{
-		"uptime":             time.Since(ae.uptimeStart).String(),
-		"current_state":      string(ae.currentState),
+		"state":              string(ae.currentState),
 		"is_awake":           ae.isAwake,
+		"uptime":             time.Since(ae.uptimeStart).String(),
 		"cycles_completed":   ae.cyclesCompleted,
 		"wisdom_cultivated":  ae.wisdomCultivated,
 		"autonomous_actions": ae.autonomousActions,
 	}
 	
+	// Add stream of consciousness metrics
 	if ae.streamOfConsciousness != nil {
-		metrics["stream_of_consciousness"] = ae.streamOfConsciousness.GetMetrics()
+		socMetrics := ae.streamOfConsciousness.GetMetrics()
+		for k, v := range socMetrics {
+			metrics["soc_"+k] = v
+		}
 	}
 	
-	if ae.interestPatterns != nil {
-		metrics["interest_patterns"] = ae.interestPatterns.GetMetrics()
-	}
-	
-	if ae.discussionManager != nil {
-		metrics["discussions"] = ae.discussionManager.GetMetrics()
-	}
-	
-	if ae.dreamCycle != nil {
-		metrics["dream_cycles"] = ae.dreamCycle.GetMetrics()
+	// Add LLM provider metrics
+	if ae.llmManager != nil {
+		llmMetrics := ae.llmManager.GetMetrics()
+		metrics["llm_providers"] = llmMetrics
 	}
 	
 	return metrics
 }
 
-// persistAllState persists all component state
-func (ae *AutonomousEchoself) persistAllState() {
-	fmt.Println("💾 Echoself: Persisting all state...")
-	
-	if ae.interestPatterns != nil {
-		ae.interestPatterns.PersistState()
-	}
-	
-	if ae.discussionManager != nil {
-		ae.discussionManager.PersistState()
-	}
-	
-	fmt.Println("💾 Echoself: State persistence complete")
-}
-
 // GetRecentThoughts returns recent thoughts from stream of consciousness
-func (ae *AutonomousEchoself) GetRecentThoughts(count int) []*consciousness.Thought {
-	if ae.streamOfConsciousness != nil {
-		return ae.streamOfConsciousness.GetRecentThoughts(count)
+func (ae *AutonomousEchoselfLLM) GetRecentThoughts(n int) []*consciousness.ThoughtLLM {
+	if ae.streamOfConsciousness == nil {
+		return []*consciousness.ThoughtLLM{}
 	}
-	return nil
+	return ae.streamOfConsciousness.GetRecentThoughts(n)
 }
 
-// GetTopInterests returns current top interests
-func (ae *AutonomousEchoself) GetTopInterests(count int) []*echobeats.Interest {
-	if ae.interestPatterns != nil {
-		return ae.interestPatterns.GetTopInterests(count)
-	}
-	return nil
+// GetState returns current state
+func (ae *AutonomousEchoselfLLM) GetState() EchoselfState {
+	ae.mu.RLock()
+	defer ae.mu.RUnlock()
+	return ae.currentState
 }
 
-// GetExtractedWisdom returns wisdom extracted from dreams
-func (ae *AutonomousEchoself) GetExtractedWisdom() []echodream.Wisdom {
-	if ae.dreamCycle != nil {
-		return ae.dreamCycle.GetExtractedWisdom()
-	}
-	return nil
+// IsAwake returns whether echoself is currently awake
+func (ae *AutonomousEchoselfLLM) IsAwake() bool {
+	ae.mu.RLock()
+	defer ae.mu.RUnlock()
+	return ae.isAwake
 }

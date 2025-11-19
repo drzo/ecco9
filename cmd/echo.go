@@ -106,7 +106,7 @@ func EchoStatusHandler(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Call the echo status endpoint
-	req, err := http.NewRequestWithContext(ctx, "GET", client.Base().JoinPath("/api/echo/status").String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", client.BaseURL().JoinPath("/api/echo/status").String(), nil)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func EchoThinkHandler(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", client.Base().JoinPath("/api/echo/think").String(), bytes.NewReader(reqBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", client.BaseURL().JoinPath("/api/echo/think").String(), bytes.NewReader(reqBytes))
 	if err != nil {
 		return err
 	}

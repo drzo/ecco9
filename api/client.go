@@ -36,7 +36,7 @@ import (
 // Client encapsulates client state for interacting with the ollama
 // service. Use [ClientFromEnvironment] to create new Clients.
 type Client struct {
-	base *url.URL
+	Base *url.URL
 	http *http.Client
 }
 
@@ -67,14 +67,14 @@ func checkError(resp *http.Response, body []byte) error {
 // used.
 func ClientFromEnvironment() (*Client, error) {
 	return &Client{
-		base: envconfig.Host(),
+		Base: envconfig.Host(),
 		http: http.DefaultClient,
 	}, nil
 }
 
 func NewClient(base *url.URL, http *http.Client) *Client {
 	return &Client{
-		base: base,
+		Base: base,
 		http: http,
 	}
 }
@@ -107,10 +107,10 @@ func (c *Client) do(ctx context.Context, method, path string, reqData, respData 
 		reqBody = bytes.NewReader(data)
 	}
 
-	requestURL := c.base.JoinPath(path)
+	requestURL := c.Base.JoinPath(path)
 
 	var token string
-	if envconfig.UseAuth() || c.base.Hostname() == "ollama.com" {
+	if envconfig.UseAuth() || c.Base.Hostname() == "ollama.com" {
 		now := strconv.FormatInt(time.Now().Unix(), 10)
 		chal := fmt.Sprintf("%s,%s?ts=%s", method, path, now)
 		token, err = getAuthorizationToken(ctx, chal)
@@ -172,10 +172,10 @@ func (c *Client) stream(ctx context.Context, method, path string, data any, fn f
 		buf = bytes.NewBuffer(bts)
 	}
 
-	requestURL := c.base.JoinPath(path)
+	requestURL := c.Base.JoinPath(path)
 
 	var token string
-	if envconfig.UseAuth() || c.base.Hostname() == "ollama.com" {
+	if envconfig.UseAuth() || c.Base.Hostname() == "ollama.com" {
 		var err error
 		now := strconv.FormatInt(time.Now().Unix(), 10)
 		chal := fmt.Sprintf("%s,%s?ts=%s", method, path, now)
@@ -427,4 +427,14 @@ func (c *Client) Version(ctx context.Context) (string, error) {
 	}
 
 	return version.Version, nil
+}
+
+// BaseURL returns the base URL for the client
+func (c *Client) BaseURL() *url.URL {
+	return c.Base
+}
+
+// Do executes an HTTP request using the client's HTTP client
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	return c.http.Do(req)
 }

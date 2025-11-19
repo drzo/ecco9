@@ -507,14 +507,6 @@ func (g *GoalOrchestrator) GetMetrics() map[string]interface{} {
 		"active_goals":     len(g.activeGoals),
 		"completed_goals":  len(g.completedGoals),
 		"abandoned_goals":  len(g.abandonedGoals),
-
-	return map[string]interface{}{
-		"goals_generated": g.goalsGenerated,
-		"goals_completed": g.goalsCompleted,
-		"goals_abandoned": g.goalsAbandoned,
-		"active_goals":    len(g.activeGoals),
-		"completed_goals": len(g.completedGoals),
-		"abandoned_goals": len(g.abandonedGoals),
 	}
 }
 
@@ -551,13 +543,6 @@ func (g *GoalOrchestrator) persistState() {
 		"goals_completed":  g.goalsCompleted,
 		"goals_abandoned":  g.goalsAbandoned,
 		"last_persisted":   time.Now(),
-		"active_goals":    g.activeGoals,
-		"completed_goals": g.completedGoals,
-		"abandoned_goals": g.abandonedGoals,
-		"goals_generated": g.goalsGenerated,
-		"goals_completed": g.goalsCompleted,
-		"goals_abandoned": g.goalsAbandoned,
-		"last_persisted":  time.Now(),
 	}
 
 	data, err := json.MarshalIndent(state, "", "  ")

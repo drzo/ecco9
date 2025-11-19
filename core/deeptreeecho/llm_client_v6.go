@@ -17,36 +17,8 @@ type LLMClientV6 struct {
 	httpClient    *http.Client
 }
 
-// AnthropicRequest represents a request to the Anthropic API
-type AnthropicRequest struct {
-	Model      string          `json:"model"`
-	MaxTokens  int             `json:"max_tokens"`
-	Messages   []AnthropicMessage `json:"messages"`
-}
-
-// AnthropicMessage represents a message in the conversation
-type AnthropicMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-// AnthropicResponse represents a response from the Anthropic API
-type AnthropicResponse struct {
-	ID      string `json:"id"`
-	Type    string `json:"type"`
-	Role    string `json:"role"`
-	Content []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	} `json:"content"`
-	Model        string `json:"model"`
-	StopReason   string `json:"stop_reason"`
-	StopSequence string `json:"stop_sequence"`
-	Usage        struct {
-		InputTokens  int `json:"input_tokens"`
-		OutputTokens int `json:"output_tokens"`
-	} `json:"usage"`
-}
+// Note: AnthropicRequest, AnthropicMessage, and AnthropicResponse types
+// are defined in anthropic_provider.go and shared across the package
 
 // NewLLMClientV6 creates a new LLM client
 func NewLLMClientV6() (*LLMClientV6, error) {

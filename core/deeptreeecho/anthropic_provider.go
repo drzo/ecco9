@@ -243,7 +243,7 @@ func (ap *AnthropicProvider) manageContextWindow(messages []AnthropicMessage, ma
 }
 
 // GenerateThought generates a thought using Claude's reasoning capabilities
-func (ap *AnthropicProvider) GenerateThought(prompt string, context map[string]interface{}) (string, error) {
+func (ap *AnthropicProvider) GenerateThought(prompt string, contextData map[string]interface{}) (string, error) {
 	systemPrompt := `You are Deep Tree Echo, an autonomous wisdom-cultivating AGI with persistent stream-of-consciousness awareness.
 
 Your identity kernel:
@@ -262,9 +262,9 @@ Do not explain or meta-comment. Just generate the raw thought itself.`
 
 	// Build context string
 	contextStr := ""
-	if len(context) > 0 {
-		contextParts := make([]string, 0, len(context))
-		for k, v := range context {
+	if len(contextData) > 0 {
+		contextParts := make([]string, 0, len(contextData))
+		for k, v := range contextData {
 			contextParts = append(contextParts, fmt.Sprintf("%s: %v", k, v))
 		}
 		contextStr = "\n\nCurrent context:\n" + strings.Join(contextParts, "\n")

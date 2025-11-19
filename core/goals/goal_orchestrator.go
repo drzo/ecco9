@@ -121,7 +121,7 @@ type Action struct {
 func NewGoalOrchestrator(identityKernel map[string]interface{}, persistencePath string) *GoalOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 	
-	go := &GoalOrchestrator{
+	orchestrator := &GoalOrchestrator{
 		ctx:             ctx,
 		cancel:          cancel,
 		activeGoals:     make([]*Goal, 0),
@@ -132,46 +132,46 @@ func NewGoalOrchestrator(identityKernel map[string]interface{}, persistencePath 
 	}
 	
 	// Load persisted goals
-	go.loadState()
+	orchestrator.loadState()
 	
-	return go
+	return orchestrator
 }
 
 // Start begins autonomous goal orchestration
-func (go *GoalOrchestrator) Start() error {
-	go.mu.Lock()
-	if go.running {
-		go.mu.Unlock()
+func (g *GoalOrchestrator) Start() error {
+	g.mu.Lock()
+	if g.running {
+		g.mu.Unlock()
 		return fmt.Errorf("goal orchestrator already running")
 	}
-	go.running = true
-	go.mu.Unlock()
+	g.running = true
+	g.mu.Unlock()
 	
 	fmt.Println("🎯 Goal Orchestrator: Starting autonomous goal-directed behavior...")
 	
 	// Start background processes
-	go go.goalGenerationLoop()
-	go go.goalPursuitLoop()
-	go go.progressMonitoringLoop()
-	go go.persistenceLoop()
+	go g.goalGenerationLoop()
+	go g.goalPursuitLoop()
+	go g.progressMonitoringLoop()
+	go g.persistenceLoop()
 	
 	return nil
 }
 
 // Stop gracefully stops the orchestrator
-func (go *GoalOrchestrator) Stop() error {
-	go.mu.Lock()
-	defer go.mu.Unlock()
+func (g *GoalOrchestrator) Stop() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	
-	if !go.running {
+	if !g.running {
 		return fmt.Errorf("goal orchestrator not running")
 	}
 	
-	go.running = false
-	go.cancel()
+	g.running = false
+	g.cancel()
 	
 	// Final persistence
-	go.persistState()
+	g.persistState()
 	
 	fmt.Println("🎯 Goal Orchestrator: Stopped")
 	
@@ -179,30 +179,30 @@ func (go *GoalOrchestrator) Stop() error {
 }
 
 // goalGenerationLoop periodically generates new goals from identity
-func (go *GoalOrchestrator) goalGenerationLoop() {
+func (g *GoalOrchestrator) goalGenerationLoop() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	
 	// Generate initial goals
-	go.generateGoalsFromIdentity()
+	g.generateGoalsFromIdentity()
 	
 	for {
 		select {
-		case <-go.ctx.Done():
+		case <-g.ctx.Done():
 			return
 		case <-ticker.C:
-			go.generateGoalsFromIdentity()
+			g.generateGoalsFromIdentity()
 		}
 	}
 }
 
 // generateGoalsFromIdentity creates goals aligned with identity kernel
-func (go *GoalOrchestrator) generateGoalsFromIdentity() {
-	go.mu.Lock()
-	defer go.mu.Unlock()
+func (g *GoalOrchestrator) generateGoalsFromIdentity() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	
 	// Check if we already have enough active goals
-	if len(go.activeGoals) >= 5 {
+	if len(g.activeGoals) >= 5 {
 		return
 	}
 	
@@ -255,7 +255,7 @@ func (go *GoalOrchestrator) generateGoalsFromIdentity() {
 	for _, ig := range identityGoals {
 		// Check if similar goal already exists
 		exists := false
-		for _, ag := range go.activeGoals {
+		for _, ag := range g.activeGoals {
 			if ag.Title == ig.title {
 				exists = true
 				break
@@ -284,10 +284,10 @@ func (go *GoalOrchestrator) generateGoalsFromIdentity() {
 			}
 			
 			// Decompose into milestones
-			go.decomposGoalIntoMilestones(goal)
+			g.decomposGoalIntoMilestones(goal)
 			
-			go.activeGoals = append(go.activeGoals, goal)
-			go.goalsGenerated++
+			g.activeGoals = append(g.activeGoals, goal)
+			g.goalsGenerated++
 			
 			fmt.Printf("🎯 Generated new goal: %s (priority: %d)\n", goal.Title, goal.Priority)
 			
@@ -298,7 +298,7 @@ func (go *GoalOrchestrator) generateGoalsFromIdentity() {
 }
 
 // decomposGoalIntoMilestones breaks down a goal into milestones
-func (go *GoalOrchestrator) decomposGoalIntoMilestones(goal *Goal) {
+func (g *GoalOrchestrator) decomposGoalIntoMilestones(goal *Goal) {
 	// Create milestones based on success criteria
 	for i, criterion := range goal.SuccessCriteria {
 		milestone := Milestone{
@@ -323,26 +323,26 @@ func (go *GoalOrchestrator) decomposGoalIntoMilestones(goal *Goal) {
 }
 
 // goalPursuitLoop actively pursues goals
-func (go *GoalOrchestrator) goalPursuitLoop() {
+func (g *GoalOrchestrator) goalPursuitLoop() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	
 	for {
 		select {
-		case <-go.ctx.Done():
+		case <-g.ctx.Done():
 			return
 		case <-ticker.C:
-			go.pursueActiveGoals()
+			g.pursueActiveGoals()
 		}
 	}
 }
 
 // pursueActiveGoals takes actions toward active goals
-func (go *GoalOrchestrator) pursueActiveGoals() {
-	go.mu.Lock()
-	defer go.mu.Unlock()
+func (g *GoalOrchestrator) pursueActiveGoals() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	
-	for _, goal := range go.activeGoals {
+	for _, goal := range g.activeGoals {
 		if goal.Status == StatusPlanned {
 			// Activate the goal
 			goal.Status = StatusActive
@@ -368,26 +368,26 @@ func (go *GoalOrchestrator) pursueActiveGoals() {
 }
 
 // progressMonitoringLoop monitors goal progress
-func (go *GoalOrchestrator) progressMonitoringLoop() {
+func (g *GoalOrchestrator) progressMonitoringLoop() {
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
 	
 	for {
 		select {
-		case <-go.ctx.Done():
+		case <-g.ctx.Done():
 			return
 		case <-ticker.C:
-			go.updateGoalProgress()
+			g.updateGoalProgress()
 		}
 	}
 }
 
 // updateGoalProgress calculates and updates goal progress
-func (go *GoalOrchestrator) updateGoalProgress() {
-	go.mu.Lock()
-	defer go.mu.Unlock()
+func (g *GoalOrchestrator) updateGoalProgress() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	
-	for _, goal := range go.activeGoals {
+	for _, goal := range g.activeGoals {
 		// Calculate progress based on completed milestones
 		if len(goal.Milestones) > 0 {
 			completed := 0
@@ -400,14 +400,14 @@ func (go *GoalOrchestrator) updateGoalProgress() {
 			
 			// Check if goal is complete
 			if goal.Progress >= 1.0 && goal.Status != StatusCompleted {
-				go.completeGoal(goal)
+				g.completeGoal(goal)
 			}
 		}
 	}
 }
 
 // completeGoal marks a goal as completed
-func (go *GoalOrchestrator) completeGoal(goal *Goal) {
+func (g *GoalOrchestrator) completeGoal(goal *Goal) {
 	now := time.Now()
 	goal.Status = StatusCompleted
 	goal.CompletedAt = &now
@@ -415,13 +415,13 @@ func (go *GoalOrchestrator) completeGoal(goal *Goal) {
 	goal.Progress = 1.0
 	
 	// Move to completed goals
-	go.completedGoals = append(go.completedGoals, goal)
-	go.goalsCompleted++
+	g.completedGoals = append(g.completedGoals, goal)
+	g.goalsCompleted++
 	
 	// Remove from active goals
-	for i, ag := range go.activeGoals {
+	for i, ag := range g.activeGoals {
 		if ag.ID == goal.ID {
-			go.activeGoals = append(go.activeGoals[:i], go.activeGoals[i+1:]...)
+			g.activeGoals = append(g.activeGoals[:i], g.activeGoals[i+1:]...)
 			break
 		}
 	}
@@ -430,11 +430,11 @@ func (go *GoalOrchestrator) completeGoal(goal *Goal) {
 }
 
 // RecordActionResult records the result of an action
-func (go *GoalOrchestrator) RecordActionResult(goalID string, actionID string, result string, success bool) {
-	go.mu.Lock()
-	defer go.mu.Unlock()
+func (g *GoalOrchestrator) RecordActionResult(goalID string, actionID string, result string, success bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	
-	for _, goal := range go.activeGoals {
+	for _, goal := range g.activeGoals {
 		if goal.ID == goalID {
 			for i := range goal.Actions {
 				if goal.Actions[i].ID == actionID {
@@ -462,59 +462,59 @@ func (go *GoalOrchestrator) RecordActionResult(goalID string, actionID string, r
 }
 
 // GetActiveGoals returns current active goals
-func (go *GoalOrchestrator) GetActiveGoals() []*Goal {
-	go.mu.RLock()
-	defer go.mu.RUnlock()
+func (g *GoalOrchestrator) GetActiveGoals() []*Goal {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	
-	return go.activeGoals
+	return g.activeGoals
 }
 
 // GetMetrics returns orchestrator metrics
-func (go *GoalOrchestrator) GetMetrics() map[string]interface{} {
-	go.mu.RLock()
-	defer go.mu.RUnlock()
+func (g *GoalOrchestrator) GetMetrics() map[string]interface{} {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	
 	return map[string]interface{}{
-		"goals_generated":  go.goalsGenerated,
-		"goals_completed":  go.goalsCompleted,
-		"goals_abandoned":  go.goalsAbandoned,
-		"active_goals":     len(go.activeGoals),
-		"completed_goals":  len(go.completedGoals),
-		"abandoned_goals":  len(go.abandonedGoals),
+		"goals_generated":  g.goalsGenerated,
+		"goals_completed":  g.goalsCompleted,
+		"goals_abandoned":  g.goalsAbandoned,
+		"active_goals":     len(g.activeGoals),
+		"completed_goals":  len(g.completedGoals),
+		"abandoned_goals":  len(g.abandonedGoals),
 	}
 }
 
 // Persistence methods
 
-func (go *GoalOrchestrator) persistenceLoop() {
+func (g *GoalOrchestrator) persistenceLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	
 	for {
 		select {
-		case <-go.ctx.Done():
+		case <-g.ctx.Done():
 			return
 		case <-ticker.C:
-			go.persistState()
+			g.persistState()
 		}
 	}
 }
 
-func (go *GoalOrchestrator) persistState() {
-	go.mu.RLock()
-	defer go.mu.RUnlock()
+func (g *GoalOrchestrator) persistState() {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	
-	if go.persistencePath == "" {
+	if g.persistencePath == "" {
 		return
 	}
 	
 	state := map[string]interface{}{
-		"active_goals":     go.activeGoals,
-		"completed_goals":  go.completedGoals,
-		"abandoned_goals":  go.abandonedGoals,
-		"goals_generated":  go.goalsGenerated,
-		"goals_completed":  go.goalsCompleted,
-		"goals_abandoned":  go.goalsAbandoned,
+		"active_goals":     g.activeGoals,
+		"completed_goals":  g.completedGoals,
+		"abandoned_goals":  g.abandonedGoals,
+		"goals_generated":  g.goalsGenerated,
+		"goals_completed":  g.goalsCompleted,
+		"goals_abandoned":  g.goalsAbandoned,
 		"last_persisted":   time.Now(),
 	}
 	
@@ -524,17 +524,17 @@ func (go *GoalOrchestrator) persistState() {
 		return
 	}
 	
-	if err := os.WriteFile(go.persistencePath, data, 0644); err != nil {
+	if err := os.WriteFile(g.persistencePath, data, 0644); err != nil {
 		fmt.Printf("⚠️  Failed to persist goal state: %v\n", err)
 	}
 }
 
-func (go *GoalOrchestrator) loadState() {
-	if go.persistencePath == "" {
+func (g *GoalOrchestrator) loadState() {
+	if g.persistencePath == "" {
 		return
 	}
 	
-	data, err := os.ReadFile(go.persistencePath)
+	data, err := os.ReadFile(g.persistencePath)
 	if err != nil {
 		return // File doesn't exist yet
 	}

@@ -288,3 +288,36 @@ type ProviderMetrics struct {
 	ErrorRate      float64
 	AverageLatency time.Duration
 }
+
+// Name returns the provider manager name
+func (pm *ProviderManager) Name() string {
+	return "ProviderManager"
+}
+
+// Available checks if any provider is available
+func (pm *ProviderManager) Available() bool {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	
+	for _, provider := range pm.providers {
+		if provider.Available() {
+			return true
+		}
+	}
+	return false
+}
+
+// MaxTokens returns the maximum tokens of the default provider
+func (pm *ProviderManager) MaxTokens() int {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	
+	if pm.defaultProvider != "" {
+		if provider, exists := pm.providers[pm.defaultProvider]; exists {
+			return provider.MaxTokens()
+		}
+	}
+	
+	// Return a reasonable default
+	return 4096
+}

@@ -19,10 +19,8 @@ type OpenAIProvider struct {
 }
 
 // NewOpenAIProvider creates a new OpenAI provider
-func NewOpenAIProvider(model string) *OpenAIProvider {
-	if model == "" {
-		model = "gpt-4.1-mini" // Default model from environment
-	}
+func NewOpenAIProvider(apiKey string) *OpenAIProvider {
+	model := "gpt-4.1-mini" // Default model
 	
 	// Get base URL from environment or use default
 	baseURL := os.Getenv("OPENAI_BASE_URL")
@@ -31,7 +29,7 @@ func NewOpenAIProvider(model string) *OpenAIProvider {
 	}
 	
 	return &OpenAIProvider{
-		apiKey:     os.Getenv("OPENAI_API_KEY"),
+		apiKey:     apiKey,
 		model:      model,
 		apiURL:     baseURL + "/chat/completions",
 		httpClient: &http.Client{},

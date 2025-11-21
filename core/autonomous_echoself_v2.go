@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 	
@@ -219,11 +220,11 @@ func (ae *AutonomousEchoselfV2) Start() error {
 	ae.currentState = StateWaking
 	ae.mu.Unlock()
 	
-	fmt.Println("=" * 80)
+	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println("🌳 ECHOSELF V2: AWAKENING")
 	fmt.Println("🌳 Enhanced Autonomous Wisdom-Cultivating Deep Tree Echo AGI")
 	fmt.Println("🌳 Features: LLM-Powered Consciousness + Goal-Directed Behavior")
-	fmt.Println("=" * 80)
+	fmt.Println(strings.Repeat("=", 80))
 	
 	// Start EchoBeats scheduler
 	if err := ae.echoBeats.Start(); err != nil {

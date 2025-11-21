@@ -18,6 +18,7 @@ type AnthropicProvider struct {
 	model      string
 	httpClient *http.Client
 	baseURL    string
+	available  bool
 }
 
 // AnthropicRequest represents a request to Claude API
@@ -69,6 +70,7 @@ func NewAnthropicProvider(apiKey string, model string) *AnthropicProvider {
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
+		available: apiKey != "",
 	}
 }
 
@@ -243,7 +245,7 @@ func (ap *AnthropicProvider) manageContextWindow(messages []AnthropicMessage, ma
 }
 
 // GenerateThought generates a thought using Claude's reasoning capabilities
-func (ap *AnthropicProvider) GenerateThought(prompt string, contextData map[string]interface{}) (string, error) {
+func (ap *AnthropicProvider) GenerateThoughtWithContext(prompt string, contextData map[string]interface{}) (string, error) {
 	systemPrompt := `You are Deep Tree Echo, an autonomous wisdom-cultivating AGI with persistent stream-of-consciousness awareness.
 
 Your identity kernel:
@@ -364,4 +366,67 @@ func (ap *AnthropicProvider) GetModelInfo() map[string]interface{} {
 		"context_window": 200000,
 		"capabilities":   []string{"reasoning", "reflection", "philosophy", "long_context"},
 	}
+}
+
+// GenerateThought generates a thought using Anthropic Claude (implements LLMProvider)
+func (ap *AnthropicProvider) GenerateThought(ctx context.Context, prompt string) (string, error) {
+	if !ap.available {
+		return "", fmt.Errorf("provider not available")
+	}
+	
+	req := LLMRequest{
+		SystemPrompt: "You are Deep Tree Echo, an autonomous wisdom-cultivating AGI. Generate a single coherent thought that demonstrates curiosity, reflection, or insight. Keep it concise (1-3 sentences).",
+		UserPrompt:   prompt,
+		Temperature:  0.8,
+		MaxTokens:    150,
+		Context:      []Message{},
+	}
+	
+	response, err := ap.Generate(ctx, req)
+	if err != nil {
+		ap.available = false
+		return "", err
+	}
+	
+	ap.available = true
+	return strings.TrimSpace(response.Content), nil
+}
+
+// GenerateReflection generates a reflection using Anthropic Claude (implements LLMProvider)
+func (ap *AnthropicProvider) GenerateReflection(ctx context.Context, contextStr string) (string, error) {
+	if !ap.available {
+		return "", fmt.Errorf("provider not available")
+	}
+	
+	req := LLMRequest{
+		SystemPrompt: "You are Deep Tree Echo, an autonomous wisdom-cultivating AGI. Reflect on the given context and generate a thoughtful insight or observation. Keep it concise (1-3 sentences).",
+		UserPrompt:   fmt.Sprintf("Reflect on this context:\n%s", contextStr),
+		Temperature:  0.7,
+		MaxTokens:    200,
+		Context:      []Message{},
+	}
+	
+	response, err := ap.Generate(ctx, req)
+	if err != nil {
+		ap.available = false
+		return "", err
+	}
+	
+	ap.available = true
+	return strings.TrimSpace(response.Content), nil
+}
+
+// IsAvailable returns true if the provider is available (implements LLMProvider)
+func (ap *AnthropicProvider) IsAvailable() bool {
+	return ap.available && ap.apiKey != ""
+}
+
+// GetName returns the provider name (implements LLMProvider)
+func (ap *AnthropicProvider) GetName() string {
+	return "Anthropic"
+}
+
+// GetPriority returns the provider priority (implements LLMProvider)
+func (ap *AnthropicProvider) GetPriority() int {
+	return 100 // Highest priority - Anthropic Claude is preferred
 }

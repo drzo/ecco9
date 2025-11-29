@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cogpy/echo9llama/core/echoself"
+	"github.com/EchoCog/echollama/core/echoself"
 )
 
 func main() {

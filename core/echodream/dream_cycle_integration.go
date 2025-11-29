@@ -23,7 +23,7 @@ type DreamCycleIntegration struct {
 	maxDreamHistory       int
 	
 	// Memory buffers
-	episodicBuffer        []EpisodicMemory
+	episodicBuffer        []DreamEpisodicMemory
 	workingMemory         []WorkingMemoryItem
 	
 	// Wisdom extraction
@@ -55,8 +55,8 @@ type Dream struct {
 	Narrative         string                 `json:"narrative"`
 }
 
-// EpisodicMemory represents an experience to be consolidated
-type EpisodicMemory struct {
+// DreamEpisodicMemory represents an experience to be consolidated during dreams
+type DreamEpisodicMemory struct {
 	ID          string                 `json:"id"`
 	Timestamp   time.Time              `json:"timestamp"`
 	Content     string                 `json:"content"`
@@ -123,7 +123,7 @@ func NewDreamCycleIntegration() *DreamCycleIntegration {
 		wisdomExtractor:  NewWisdomExtractor(),
 		dreamHistory:     make([]*Dream, 0),
 		maxDreamHistory:  100,
-		episodicBuffer:   make([]EpisodicMemory, 0),
+		episodicBuffer:   make([]DreamEpisodicMemory, 0),
 		workingMemory:    make([]WorkingMemoryItem, 0),
 		extractedWisdom:  make([]Wisdom, 0),
 	}
@@ -277,13 +277,13 @@ func (dci *DreamCycleIntegration) EndDreamCycle() error {
 	dci.consolidationCycles++
 	
 	// Clear processed memories
-	dci.episodicBuffer = make([]EpisodicMemory, 0)
+	dci.episodicBuffer = make([]DreamEpisodicMemory, 0)
 	
 	return nil
 }
 
 // AddEpisodicMemory adds a memory to be consolidated
-func (dci *DreamCycleIntegration) AddEpisodicMemory(memory EpisodicMemory) {
+func (dci *DreamCycleIntegration) AddEpisodicMemory(memory DreamEpisodicMemory) {
 	dci.mu.Lock()
 	defer dci.mu.Unlock()
 	
@@ -338,9 +338,9 @@ func (dci *DreamCycleIntegration) consolidateMemories() []DreamConsolidationResu
 }
 
 // groupSimilarMemories groups memories by similarity
-func (dci *DreamCycleIntegration) groupSimilarMemories(memories []EpisodicMemory) [][]EpisodicMemory {
+func (dci *DreamCycleIntegration) groupSimilarMemories(memories []DreamEpisodicMemory) [][]DreamEpisodicMemory {
 	// Simple grouping by tags (could be enhanced with embeddings)
-	groups := make(map[string][]EpisodicMemory)
+	groups := make(map[string][]DreamEpisodicMemory)
 	
 	for _, mem := range memories {
 		if len(mem.Tags) > 0 {
@@ -349,7 +349,7 @@ func (dci *DreamCycleIntegration) groupSimilarMemories(memories []EpisodicMemory
 		}
 	}
 	
-	result := make([][]EpisodicMemory, 0, len(groups))
+	result := make([][]DreamEpisodicMemory, 0, len(groups))
 	for _, group := range groups {
 		result = append(result, group)
 	}

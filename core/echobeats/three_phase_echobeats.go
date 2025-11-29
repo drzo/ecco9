@@ -12,51 +12,51 @@ import (
 // EchoBeatsThreePhase implements the 12-step 3-phase cognitive loop
 // with 3 concurrent inference engines as specified in the architecture
 type EchoBeatsThreePhase struct {
-	mu                  sync.RWMutex
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	
-	// Three concurrent inference engines
-	engine1             *InferenceEngine
-	engine2             *InferenceEngine
-	engine3             *InferenceEngine
-	
+	mu     sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	// Three concurrent simple inference engines
+	engine1 *SimpleInferenceEngine
+	engine2 *SimpleInferenceEngine
+	engine3 *SimpleInferenceEngine
+
 	// LLM providers for actual inference
-	llmProvider1        llm.Provider
-	llmProvider2        llm.Provider
-	llmProvider3        llm.Provider
-	
+	llmProvider1 llm.Provider
+	llmProvider2 llm.Provider
+	llmProvider3 llm.Provider
+
 	// 12-step cognitive loop state
-	currentStep         int
-	currentPhase        CognitivePhaseEnum
-	stepHistory         []StepExecution
-	
+	currentStep  int
+	currentPhase CognitivePhaseEnum
+	stepHistory  []StepExecution
+
 	// Phase-specific processors
 	expressiveProcessor *ExpressiveProcessor
 	reflectiveProcessor *ReflectiveProcessor
-	
+
 	// Relevance realization
-	relevanceRealizer   *RelevanceRealizer
-	
+	relevanceRealizer *RelevanceRealizer
+
 	// Affordance and salience
-	affordanceTracker   *AffordanceTracker
-	salienceSimulator   *SalienceSimulator
-	
+	affordanceTracker *AffordanceTracker
+	salienceSimulator *SalienceSimulator
+
 	// Cognitive state
-	presentCommitment   string
-	pastPerformance     []PerformanceRecord
-	futurePotential     []PotentialScenario
-	
+	presentCommitment string
+	pastPerformance   []PerformanceRecord
+	futurePotential   []PotentialScenario
+
 	// Callbacks
-	onThoughtGenerated  func(thought string)
-	onStepComplete      func(step int, phase CognitivePhaseEnum)
-	
+	onThoughtGenerated func(thought string)
+	onStepComplete     func(step int, phase CognitivePhaseEnum)
+
 	// Metrics
-	cyclesCompleted     uint64
-	stepsExecuted       uint64
-	
+	cyclesCompleted uint64
+	stepsExecuted   uint64
+
 	// Running state
-	running             bool
+	running bool
 }
 
 // CognitivePhaseEnum represents the three phases of the loop
@@ -64,9 +64,9 @@ type EchoBeatsThreePhase struct {
 type CognitivePhaseEnum int
 
 const (
-	PhaseExpressive CognitivePhaseEnum = iota  // Steps 1-7
-	PhaseReflective                            // Steps 8-12
-	PhaseTransition                            // Between phases
+	PhaseExpressive CognitivePhaseEnum = iota // Steps 1-7
+	PhaseReflective                           // Steps 8-12
+	PhaseTransition                           // Between phases
 )
 
 func (cp CognitivePhaseEnum) String() string {
@@ -75,14 +75,15 @@ func (cp CognitivePhaseEnum) String() string {
 
 // StepExecution and StepType are now defined in shared_types.go to avoid redeclaration
 
-// InferenceEngine represents one of the three concurrent engines
-type InferenceEngine struct {
-	mu              sync.RWMutex
-	id              int
-	state           EngineState
-	currentTask     *InferenceTask
-	completedTasks  uint64
-	processingTime  time.Duration
+// SimpleInferenceEngine is a simplified inference engine for three-phase processing
+// This is different from the full InferenceEngine in inference_engine.go
+type SimpleInferenceEngine struct {
+	mu             sync.RWMutex
+	id             int
+	state          EngineState
+	currentTask    *SimpleInferenceTask
+	completedTasks uint64
+	processingTime time.Duration
 }
 
 // EngineState represents engine state
@@ -94,86 +95,87 @@ const (
 	EngineWaiting
 )
 
-// InferenceTask represents a task for an engine
-type InferenceTask struct {
-	ID          string
-	Type        StepType
-	Input       interface{}
-	Output      interface{}
-	StartTime   time.Time
-	EndTime     time.Time
+// SimpleInferenceTask represents a simple task for the three-phase engine
+// This is different from the full InferenceTask in inference_engine.go
+type SimpleInferenceTask struct {
+	ID        string
+	Type      StepType
+	Input     interface{}
+	Output    interface{}
+	StartTime time.Time
+	EndTime   time.Time
 }
 
 // ExpressiveProcessor handles expressive mode steps (1-7)
 type ExpressiveProcessor struct {
-	mu              sync.RWMutex
-	activeActions   []string
-	performanceLog  []PerformanceRecord
+	mu             sync.RWMutex
+	activeActions  []string
+	performanceLog []PerformanceRecord
 }
 
 // ReflectiveProcessor handles reflective mode steps (8-12)
 type ReflectiveProcessor struct {
-	mu              sync.RWMutex
-	simulations     []PotentialScenario
-	evaluations     []ScenarioEvaluation
+	mu          sync.RWMutex
+	simulations []PotentialScenario
+	evaluations []ScenarioEvaluation
 }
 
 // RelevanceRealizer handles pivotal relevance realization (steps 1, 7)
 type RelevanceRealizer struct {
-	mu              sync.RWMutex
-	currentFocus    string
-	relevanceScore  float64
-	commitments     []Commitment
+	mu             sync.RWMutex
+	currentFocus   string
+	relevanceScore float64
+	commitments    []Commitment
 }
 
 // AffordanceTracker tracks actual affordance interactions (steps 2-6)
 type AffordanceTracker struct {
-	mu              sync.RWMutex
-	affordances     []Affordance
-	interactions    []Interaction
+	mu           sync.RWMutex
+	affordances  []ThreePhaseAffordance
+	interactions []Interaction
 }
 
 // SalienceSimulator handles virtual salience simulation (steps 8-12)
 type SalienceSimulator struct {
-	mu              sync.RWMutex
-	scenarios       []PotentialScenario
-	salienceMap     map[string]float64
+	mu          sync.RWMutex
+	scenarios   []PotentialScenario
+	salienceMap map[string]float64
 }
 
 // Supporting types
 
 type PerformanceRecord struct {
-	Action      string
-	Timestamp   time.Time
-	Outcome     string
-	Quality     float64
+	Action    string
+	Timestamp time.Time
+	Outcome   string
+	Quality   float64
 }
 
 type PotentialScenario struct {
-	ID          string
-	Description string
-	Probability float64
+	ID           string
+	Description  string
+	Probability  float64
 	Desirability float64
-	Timestamp   time.Time
+	Timestamp    time.Time
 }
 
 type ScenarioEvaluation struct {
-	ScenarioID  string
-	Score       float64
-	Reasoning   string
+	ScenarioID string
+	Score      float64
+	Reasoning  string
 }
 
 type Commitment struct {
-	Focus       string
-	Strength    float64
-	Timestamp   time.Time
+	Focus     string
+	Strength  float64
+	Timestamp time.Time
 }
 
-type Affordance struct {
-	ID          string
-	Type        string
-	Available   bool
-	Quality     float64
+type ThreePhaseAffordance struct {
+	ID        string
+	Type      string
+	Available bool
+	Quality   float64
 }
 
 type Interaction struct {
@@ -191,16 +193,16 @@ func NewEchoBeatsThreePhase() *EchoBeatsThreePhase {
 // NewEchoBeatsThreePhaseWithProviders creates a new 3-phase EchoBeats system with LLM providers
 func NewEchoBeatsThreePhaseWithProviders(provider1, provider2, provider3 llm.Provider) *EchoBeatsThreePhase {
 	ctx, cancel := context.WithCancel(context.Background())
-	
-		eb := &EchoBeatsThreePhase{
-			ctx:                 ctx,
-			cancel:              cancel,
-			engine1:             newInferenceEngine(1),
-			engine2:             newInferenceEngine(2),
-			engine3:             newInferenceEngine(3),
-			llmProvider1:        provider1,
-			llmProvider2:        provider2,
-			llmProvider3:        provider3,
+
+	eb := &EchoBeatsThreePhase{
+		ctx:                 ctx,
+		cancel:              cancel,
+		engine1:             newSimpleInferenceEngine(1),
+		engine2:             newSimpleInferenceEngine(2),
+		engine3:             newSimpleInferenceEngine(3),
+		llmProvider1:        provider1,
+		llmProvider2:        provider2,
+		llmProvider3:        provider3,
 		currentStep:         1,
 		currentPhase:        PhaseExpressive,
 		stepHistory:         make([]StepExecution, 0),
@@ -209,15 +211,15 @@ func NewEchoBeatsThreePhaseWithProviders(provider1, provider2, provider3 llm.Pro
 		relevanceRealizer:   newRelevanceRealizer(),
 		affordanceTracker:   newAffordanceTracker(),
 		salienceSimulator:   newSalienceSimulator(),
-			pastPerformance:     make([]PerformanceRecord, 0),
-			futurePotential:     make([]PotentialScenario, 0),
-		}
-		
-		return eb
+		pastPerformance:     make([]PerformanceRecord, 0),
+		futurePotential:     make([]PotentialScenario, 0),
 	}
 
-func newInferenceEngine(id int) *InferenceEngine {
-	return &InferenceEngine{
+	return eb
+}
+
+func newSimpleInferenceEngine(id int) *SimpleInferenceEngine {
+	return &SimpleInferenceEngine{
 		id:    id,
 		state: EngineIdle,
 	}
@@ -245,7 +247,7 @@ func newRelevanceRealizer() *RelevanceRealizer {
 
 func newAffordanceTracker() *AffordanceTracker {
 	return &AffordanceTracker{
-		affordances:  make([]Affordance, 0),
+		affordances:  make([]ThreePhaseAffordance, 0),
 		interactions: make([]Interaction, 0),
 	}
 }
@@ -266,7 +268,7 @@ func (eb *EchoBeatsThreePhase) Start() error {
 	}
 	eb.running = true
 	eb.mu.Unlock()
-	
+
 	fmt.Println("🎵 ═══════════════════════════════════════════════════════")
 	fmt.Println("🎵 EchoBeats Three-Phase: 12-Step Cognitive Loop Starting")
 	fmt.Println("🎵 ═══════════════════════════════════════════════════════")
@@ -276,15 +278,15 @@ func (eb *EchoBeatsThreePhase) Start() error {
 	fmt.Println("🎵   - Phase 1: Steps 1-7 (Expressive Mode)")
 	fmt.Println("🎵   - Phase 2: Steps 8-12 (Reflective Mode)")
 	fmt.Println("🎵 ═══════════════════════════════════════════════════════\n")
-	
+
 	// Start the three concurrent engines
 	go eb.runEngine(eb.engine1)
 	go eb.runEngine(eb.engine2)
 	go eb.runEngine(eb.engine3)
-	
+
 	// Start the main cognitive loop
 	go eb.cognitiveLoop()
-	
+
 	return nil
 }
 
@@ -292,15 +294,15 @@ func (eb *EchoBeatsThreePhase) Start() error {
 func (eb *EchoBeatsThreePhase) Stop() error {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
-	
+
 	if !eb.running {
 		return fmt.Errorf("not running")
 	}
-	
+
 	fmt.Println("\n🎵 Stopping EchoBeats Three-Phase...")
 	eb.running = false
 	eb.cancel()
-	
+
 	return nil
 }
 
@@ -308,7 +310,7 @@ func (eb *EchoBeatsThreePhase) Stop() error {
 func (eb *EchoBeatsThreePhase) cognitiveLoop() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-eb.ctx.Done():
@@ -324,56 +326,56 @@ func (eb *EchoBeatsThreePhase) executeNextStep() {
 	eb.mu.Lock()
 	step := eb.currentStep
 	eb.mu.Unlock()
-	
+
 	startTime := time.Now()
-	
+
 	// Determine step type and execute
 	var stepType StepType
 	var output interface{}
-	
+
 	switch step {
 	case 1:
 		// Step 1: Pivotal Relevance Realization (Orienting Present Commitment)
 		stepType = StepRelevanceRealization
 		output = eb.executeRelevanceRealization("present_commitment_initial")
 		fmt.Printf("🎵 Step %d: Relevance Realization - Orienting Present Commitment\n", step)
-		
+
 	case 2, 3, 4, 5, 6:
 		// Steps 2-6: Actual Affordance Interaction (Conditioning Past Performance)
 		stepType = StepAffordanceInteraction
 		output = eb.executeAffordanceInteraction(step)
 		fmt.Printf("🎵 Step %d: Affordance Interaction - Conditioning Past Performance\n", step)
-		
+
 	case 7:
 		// Step 7: Pivotal Relevance Realization (Orienting Present Commitment)
 		stepType = StepRelevanceRealization
 		output = eb.executeRelevanceRealization("present_commitment_refined")
 		fmt.Printf("🎵 Step %d: Relevance Realization - Orienting Present Commitment (Refined)\n", step)
-		
+
 	case 8, 9, 10, 11, 12:
 		// Steps 8-12: Virtual Salience Simulation (Anticipating Future Potential)
 		stepType = StepSalienceSimulation
 		output = eb.executeSalienceSimulation(step)
 		fmt.Printf("🎵 Step %d: Salience Simulation - Anticipating Future Potential\n", step)
 	}
-	
+
 	duration := time.Since(startTime)
-	
+
 	// Record step execution
 	execution := StepExecution{
 		StepNumber: step,
 		// PhaseType omitted - using local CognitivePhase tracking instead
-		Timestamp:  startTime,
-		StartTime:  startTime,
-		Duration:   duration,
-		Output:     output,
-		Success:    true, // Assume success if no error
+		Timestamp: startTime,
+		StartTime: startTime,
+		Duration:  duration,
+		Output:    output,
+		Success:   true, // Assume success if no error
 	}
-	
+
 	eb.mu.Lock()
 	eb.stepHistory = append(eb.stepHistory, execution)
 	eb.stepsExecuted++
-	
+
 	// Advance to next step
 	eb.currentStep++
 	if eb.currentStep > 12 {
@@ -381,14 +383,14 @@ func (eb *EchoBeatsThreePhase) executeNextStep() {
 		eb.cyclesCompleted++
 		fmt.Printf("\n🎵 ═══ Cycle %d Complete ═══\n\n", eb.cyclesCompleted)
 	}
-	
+
 	// Update phase
 	eb.currentPhase = eb.determinePhase(eb.currentStep)
 	eb.mu.Unlock()
-	
+
 	// Callback
 	if eb.onStepComplete != nil {
-		eb.onStepComplete(step, execution.Phase)
+		eb.onStepComplete(step, eb.currentPhase)
 	}
 }
 
@@ -396,23 +398,23 @@ func (eb *EchoBeatsThreePhase) executeNextStep() {
 func (eb *EchoBeatsThreePhase) executeRelevanceRealization(context string) string {
 	eb.relevanceRealizer.mu.Lock()
 	defer eb.relevanceRealizer.mu.Unlock()
-	
+
 	// Determine current focus and commitment
 	focus := fmt.Sprintf("Focus_%s_%d", context, time.Now().Unix())
 	eb.relevanceRealizer.currentFocus = focus
 	eb.relevanceRealizer.relevanceScore = 0.8
-	
+
 	commitment := Commitment{
 		Focus:     focus,
 		Strength:  0.8,
 		Timestamp: time.Now(),
 	}
 	eb.relevanceRealizer.commitments = append(eb.relevanceRealizer.commitments, commitment)
-	
+
 	eb.mu.Lock()
 	eb.presentCommitment = focus
 	eb.mu.Unlock()
-	
+
 	return focus
 }
 
@@ -420,10 +422,10 @@ func (eb *EchoBeatsThreePhase) executeRelevanceRealization(context string) strin
 func (eb *EchoBeatsThreePhase) executeAffordanceInteraction(step int) string {
 	eb.affordanceTracker.mu.Lock()
 	defer eb.affordanceTracker.mu.Unlock()
-	
+
 	// Simulate affordance interaction
 	affordanceID := fmt.Sprintf("affordance_%d_%d", step, time.Now().Unix())
-	
+
 	interaction := Interaction{
 		AffordanceID: affordanceID,
 		Timestamp:    time.Now(),
@@ -431,7 +433,7 @@ func (eb *EchoBeatsThreePhase) executeAffordanceInteraction(step int) string {
 		Performance:  0.7 + float64(step)*0.05,
 	}
 	eb.affordanceTracker.interactions = append(eb.affordanceTracker.interactions, interaction)
-	
+
 	// Record performance
 	performance := PerformanceRecord{
 		Action:    fmt.Sprintf("Action_Step_%d", step),
@@ -439,11 +441,11 @@ func (eb *EchoBeatsThreePhase) executeAffordanceInteraction(step int) string {
 		Outcome:   "completed",
 		Quality:   interaction.Performance,
 	}
-	
+
 	eb.mu.Lock()
 	eb.pastPerformance = append(eb.pastPerformance, performance)
 	eb.mu.Unlock()
-	
+
 	return affordanceID
 }
 
@@ -451,10 +453,10 @@ func (eb *EchoBeatsThreePhase) executeAffordanceInteraction(step int) string {
 func (eb *EchoBeatsThreePhase) executeSalienceSimulation(step int) string {
 	eb.salienceSimulator.mu.Lock()
 	defer eb.salienceSimulator.mu.Unlock()
-	
+
 	// Simulate future scenario
 	scenarioID := fmt.Sprintf("scenario_%d_%d", step, time.Now().Unix())
-	
+
 	scenario := PotentialScenario{
 		ID:           scenarioID,
 		Description:  fmt.Sprintf("Future scenario from step %d", step),
@@ -462,22 +464,22 @@ func (eb *EchoBeatsThreePhase) executeSalienceSimulation(step int) string {
 		Desirability: 0.7 + float64(step-8)*0.05,
 		Timestamp:    time.Now(),
 	}
-	
+
 	eb.salienceSimulator.scenarios = append(eb.salienceSimulator.scenarios, scenario)
 	eb.salienceSimulator.salienceMap[scenarioID] = scenario.Probability * scenario.Desirability
-	
+
 	eb.mu.Lock()
 	eb.futurePotential = append(eb.futurePotential, scenario)
 	eb.mu.Unlock()
-	
+
 	return scenarioID
 }
 
-// runEngine runs an inference engine
-func (eb *EchoBeatsThreePhase) runEngine(engine *InferenceEngine) {
+// runEngine runs a simple inference engine
+func (eb *EchoBeatsThreePhase) runEngine(engine *SimpleInferenceEngine) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-eb.ctx.Done():
@@ -488,23 +490,23 @@ func (eb *EchoBeatsThreePhase) runEngine(engine *InferenceEngine) {
 	}
 }
 
-// processEngineTask processes tasks for an engine
-func (eb *EchoBeatsThreePhase) processEngineTask(engine *InferenceEngine) {
+// processEngineTask processes tasks for a simple engine
+func (eb *EchoBeatsThreePhase) processEngineTask(engine *SimpleInferenceEngine) {
 	engine.mu.Lock()
 	defer engine.mu.Unlock()
-	
+
 	if engine.state == EngineIdle {
 		// Assign new task based on current step
 		eb.mu.RLock()
 		step := eb.currentStep
 		eb.mu.RUnlock()
-		
-		task := &InferenceTask{
+
+		task := &SimpleInferenceTask{
 			ID:        fmt.Sprintf("task_e%d_%d", engine.id, time.Now().UnixNano()),
 			Type:      eb.getStepType(step),
 			StartTime: time.Now(),
 		}
-		
+
 		engine.currentTask = task
 		engine.state = EngineProcessing
 	} else if engine.state == EngineProcessing {
@@ -514,7 +516,7 @@ func (eb *EchoBeatsThreePhase) processEngineTask(engine *InferenceEngine) {
 			engine.processingTime += engine.currentTask.EndTime.Sub(engine.currentTask.StartTime)
 			engine.completedTasks++
 		}
-		
+
 		engine.currentTask = nil
 		engine.state = EngineIdle
 	}
@@ -552,7 +554,7 @@ func (eb *EchoBeatsThreePhase) SetThoughtCallback(callback func(thought string))
 }
 
 // SetStepCompleteCallback sets the step complete callback
-func (eb *EchoBeatsThreePhase) SetStepCompleteCallback(callback func(step int, phase CognitivePhase)) {
+func (eb *EchoBeatsThreePhase) SetStepCompleteCallback(callback func(step int, phase CognitivePhaseEnum)) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
 	eb.onStepComplete = callback
@@ -562,17 +564,17 @@ func (eb *EchoBeatsThreePhase) SetStepCompleteCallback(callback func(step int, p
 func (eb *EchoBeatsThreePhase) GetMetrics() map[string]interface{} {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-	
+
 	return map[string]interface{}{
-		"current_step":      eb.currentStep,
-		"current_phase":     eb.currentPhase.String(),
-		"cycles_completed":  eb.cyclesCompleted,
-		"steps_executed":    eb.stepsExecuted,
-		"engine1_tasks":     eb.engine1.completedTasks,
-		"engine2_tasks":     eb.engine2.completedTasks,
-		"engine3_tasks":     eb.engine3.completedTasks,
-		"past_performance":  len(eb.pastPerformance),
-		"future_scenarios":  len(eb.futurePotential),
+		"current_step":     eb.currentStep,
+		"current_phase":    eb.currentPhase.String(),
+		"cycles_completed": eb.cyclesCompleted,
+		"steps_executed":   eb.stepsExecuted,
+		"engine1_tasks":    eb.engine1.completedTasks,
+		"engine2_tasks":    eb.engine2.completedTasks,
+		"engine3_tasks":    eb.engine3.completedTasks,
+		"past_performance": len(eb.pastPerformance),
+		"future_scenarios": len(eb.futurePotential),
 	}
 }
 
@@ -580,7 +582,7 @@ func (eb *EchoBeatsThreePhase) GetMetrics() map[string]interface{} {
 func (eb *EchoBeatsThreePhase) GetCurrentState() map[string]interface{} {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-	
+
 	return map[string]interface{}{
 		"step":               eb.currentStep,
 		"phase":              eb.currentPhase.String(),

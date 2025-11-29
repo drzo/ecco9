@@ -9,9 +9,10 @@ import (
 	"time"
 )
 
-// EchoDream is the knowledge integration and consolidation system
+// EchoDreamAdvanced is the advanced knowledge integration and consolidation system
 // It operates during rest cycles to integrate experiences into wisdom
-type EchoDream struct {
+// This is an extended version with additional features beyond the basic EchoDream
+type EchoDreamAdvanced struct {
 	mu              sync.RWMutex
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -149,11 +150,11 @@ type DreamMetrics struct {
 	IntegrationCoherence    float64
 }
 
-// NewEchoDream creates a new EchoDream system
-func NewEchoDream() *EchoDream {
+// NewEchoDreamAdvanced creates a new EchoDreamAdvanced system
+func NewEchoDreamAdvanced() *EchoDreamAdvanced {
 	ctx, cancel := context.WithCancel(context.Background())
 	
-	ed := &EchoDream{
+	ed := &EchoDreamAdvanced{
 		ctx:    ctx,
 		cancel: cancel,
 		state:  DreamStateNone,
@@ -186,7 +187,7 @@ func NewEchoDream() *EchoDream {
 }
 
 // Start begins the dream system
-func (ed *EchoDream) Start() error {
+func (ed *EchoDreamAdvanced) Start() error {
 	ed.mu.Lock()
 	if ed.running {
 		ed.mu.Unlock()
@@ -203,7 +204,7 @@ func (ed *EchoDream) Start() error {
 }
 
 // Stop stops the dream system
-func (ed *EchoDream) Stop() error {
+func (ed *EchoDreamAdvanced) Stop() error {
 	ed.mu.Lock()
 	defer ed.mu.Unlock()
 	
@@ -219,7 +220,7 @@ func (ed *EchoDream) Stop() error {
 }
 
 // BeginDream initiates a dream session
-func (ed *EchoDream) BeginDream() *DreamRecord {
+func (ed *EchoDreamAdvanced) BeginDream() *DreamRecord {
 	ed.mu.Lock()
 	defer ed.mu.Unlock()
 	
@@ -239,7 +240,7 @@ func (ed *EchoDream) BeginDream() *DreamRecord {
 }
 
 // EndDream concludes a dream session
-func (ed *EchoDream) EndDream(record *DreamRecord) []string {
+func (ed *EchoDreamAdvanced) EndDream(record *DreamRecord) []string {
 	ed.mu.Lock()
 	defer ed.mu.Unlock()
 	
@@ -267,7 +268,7 @@ func (ed *EchoDream) EndDream(record *DreamRecord) []string {
 }
 
 // dreamCycle is the main dream processing loop
-func (ed *EchoDream) dreamCycle() {
+func (ed *EchoDreamAdvanced) dreamCycle() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	
@@ -288,7 +289,7 @@ func (ed *EchoDream) dreamCycle() {
 }
 
 // processDreamPhase processes the current dream phase
-func (ed *EchoDream) processDreamPhase() {
+func (ed *EchoDreamAdvanced) processDreamPhase() {
 	ed.mu.Lock()
 	defer ed.mu.Unlock()
 	
@@ -340,7 +341,7 @@ func (ed *EchoDream) processDreamPhase() {
 }
 
 // consolidateRecentMemories consolidates recent memories
-func (ed *EchoDream) consolidateRecentMemories() {
+func (ed *EchoDreamAdvanced) consolidateRecentMemories() {
 	consolidated := 0
 	
 	for _, trace := range ed.consolidator.shortTermBuffer {
@@ -377,7 +378,7 @@ func (ed *EchoDream) consolidateRecentMemories() {
 }
 
 // strengthenImportantMemories strengthens important memory traces
-func (ed *EchoDream) strengthenImportantMemories() {
+func (ed *EchoDreamAdvanced) strengthenImportantMemories() {
 	for _, trace := range ed.consolidator.shortTermBuffer {
 		if trace.Consolidated && trace.Importance > 0.7 {
 			// Strengthen by increasing importance
@@ -393,7 +394,7 @@ func (ed *EchoDream) strengthenImportantMemories() {
 }
 
 // synthesizePatterns synthesizes new patterns from existing knowledge
-func (ed *EchoDream) synthesizePatterns() {
+func (ed *EchoDreamAdvanced) synthesizePatterns() {
 	// Randomly combine knowledge nodes to create new patterns
 	nodes := make([]*KnowledgeNode, 0)
 	for _, node := range ed.integrator.knowledgeGraph {
@@ -437,7 +438,7 @@ func (ed *EchoDream) synthesizePatterns() {
 }
 
 // exploreNovelConnections explores novel connections between concepts
-func (ed *EchoDream) exploreNovelConnections() {
+func (ed *EchoDreamAdvanced) exploreNovelConnections() {
 	// Use synthesized patterns to create new connections
 	for _, pattern := range ed.synthesizer.patterns {
 		if len(pattern.Elements) < 2 {
@@ -456,7 +457,7 @@ func (ed *EchoDream) exploreNovelConnections() {
 }
 
 // integrateKnowledge integrates new knowledge into existing structures
-func (ed *EchoDream) integrateKnowledge() {
+func (ed *EchoDreamAdvanced) integrateKnowledge() {
 	integrated := 0
 	
 	for _, task := range ed.integrator.integrationQueue {
@@ -489,7 +490,7 @@ func (ed *EchoDream) integrateKnowledge() {
 }
 
 // refineKnowledgeGraph refines the knowledge graph structure
-func (ed *EchoDream) refineKnowledgeGraph() {
+func (ed *EchoDreamAdvanced) refineKnowledgeGraph() {
 	// Calculate graph coherence
 	totalStrength := 0.0
 	totalConnections := 0
@@ -514,7 +515,7 @@ func (ed *EchoDream) refineKnowledgeGraph() {
 }
 
 // AddMemoryTrace adds a memory trace for consolidation
-func (ed *EchoDream) AddMemoryTrace(trace *MemoryTrace) {
+func (ed *EchoDreamAdvanced) AddMemoryTrace(trace *MemoryTrace) {
 	ed.consolidator.mu.Lock()
 	defer ed.consolidator.mu.Unlock()
 	
@@ -522,7 +523,7 @@ func (ed *EchoDream) AddMemoryTrace(trace *MemoryTrace) {
 }
 
 // GetStatus returns current dream system status
-func (ed *EchoDream) GetStatus() map[string]interface{} {
+func (ed *EchoDreamAdvanced) GetStatus() map[string]interface{} {
 	ed.mu.RLock()
 	defer ed.mu.RUnlock()
 	

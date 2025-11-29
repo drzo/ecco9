@@ -329,31 +329,27 @@ func (eb *EchoBeatsThreePhase) executeNextStep() {
 
 	startTime := time.Now()
 
-	// Determine step type and execute
+	// Execute step and capture output
 	var output interface{}
 
 	switch step {
 	case 1:
 		// Step 1: Pivotal Relevance Realization (Orienting Present Commitment)
-		// stepType = StepRelevanceRealization
 		output = eb.executeRelevanceRealization("present_commitment_initial")
 		fmt.Printf("🎵 Step %d: Relevance Realization - Orienting Present Commitment\n", step)
 
 	case 2, 3, 4, 5, 6:
 		// Steps 2-6: Actual Affordance Interaction (Conditioning Past Performance)
-		// stepType = StepAffordanceInteraction
 		output = eb.executeAffordanceInteraction(step)
 		fmt.Printf("🎵 Step %d: Affordance Interaction - Conditioning Past Performance\n", step)
 
 	case 7:
 		// Step 7: Pivotal Relevance Realization (Orienting Present Commitment)
-		// stepType = StepRelevanceRealization
 		output = eb.executeRelevanceRealization("present_commitment_refined")
 		fmt.Printf("🎵 Step %d: Relevance Realization - Orienting Present Commitment (Refined)\n", step)
 
 	case 8, 9, 10, 11, 12:
 		// Steps 8-12: Virtual Salience Simulation (Anticipating Future Potential)
-		// stepType = StepSalienceSimulation
 		output = eb.executeSalienceSimulation(step)
 		fmt.Printf("🎵 Step %d: Salience Simulation - Anticipating Future Potential\n", step)
 	}

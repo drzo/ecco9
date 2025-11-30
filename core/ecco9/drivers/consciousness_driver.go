@@ -206,7 +206,12 @@ func (cd *ConsciousnessDevice) Shutdown(ctx context.Context) error {
 	
 	cd.state.Status = ecco9.DeviceStatusOffline
 	cd.state.Power = ecco9.PowerStateOff
-	close(cd.messageQueue)
+	
+	// Close message queue if not already closed
+	if cd.messageQueue != nil {
+		close(cd.messageQueue)
+		cd.messageQueue = nil
+	}
 	cd.layers = nil
 	
 	return nil

@@ -34,39 +34,34 @@ func main() {
 	// Create LLM provider manager
 	providerManager := llm.NewProviderManager()
 	
-	// Register drivers
-	reservoirDriver := drivers.NewReservoirDriver()
-	if err := reservoirDriver.Load(drivers.DefaultReservoirConfig()); err != nil {
-		log.Fatalf("Failed to load reservoir driver: %v", err)
-	}
-	if err := platform.RegisterDriver(reservoirDriver); err != nil {
-		log.Fatalf("Failed to register reservoir driver: %v", err)
-	}
-	
-	llmDriver := drivers.NewLLMDriver(providerManager)
-	if err := llmDriver.Load(nil); err != nil {
-		log.Fatalf("Failed to load LLM driver: %v", err)
-	}
-	if err := platform.RegisterDriver(llmDriver); err != nil {
-		log.Fatalf("Failed to register LLM driver: %v", err)
+	// Register all drivers
+	allDrivers := []struct {
+		driver ecco9.Driver
+		config interface{}
+	}{
+		{drivers.NewReservoirDriver(), drivers.DefaultReservoirConfig()},
+		{drivers.NewConsciousnessDriver(), drivers.DefaultConsciousnessConfig()},
+		{drivers.NewEmotionDriver(), drivers.DefaultEmotionConfig()},
+		{drivers.NewMemoryDriver(), drivers.DefaultMemoryConfig()},
+		{drivers.NewLLMDriver(providerManager), nil},
 	}
 	
-	// Initialize devices from drivers
-	for _, device := range reservoirDriver.ListDevices() {
-		if err := device.Initialize(ctx); err != nil {
-			log.Printf("Warning: Failed to initialize device %s: %v", device.GetID(), err)
+	for _, d := range allDrivers {
+		if err := d.driver.Load(d.config); err != nil {
+			log.Fatalf("Failed to load %s driver: %v", d.driver.GetName(), err)
 		}
-		if err := platform.RegisterDevice(device); err != nil {
-			log.Printf("Warning: Failed to register device %s: %v", device.GetID(), err)
+		if err := platform.RegisterDriver(d.driver); err != nil {
+			log.Fatalf("Failed to register %s driver: %v", d.driver.GetName(), err)
 		}
-	}
-	
-	for _, device := range llmDriver.ListDevices() {
-		if err := device.Initialize(ctx); err != nil {
-			log.Printf("Warning: Failed to initialize device %s: %v", device.GetID(), err)
-		}
-		if err := platform.RegisterDevice(device); err != nil {
-			log.Printf("Warning: Failed to register device %s: %v", device.GetID(), err)
+		
+		// Initialize devices from this driver
+		for _, device := range d.driver.ListDevices() {
+			if err := device.Initialize(ctx); err != nil {
+				log.Printf("Warning: Failed to initialize device %s: %v", device.GetID(), err)
+			}
+			if err := platform.RegisterDevice(device); err != nil {
+				log.Printf("Warning: Failed to register device %s: %v", device.GetID(), err)
+			}
 		}
 	}
 	

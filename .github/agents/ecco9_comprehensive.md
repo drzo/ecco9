@@ -1,9 +1,9 @@
 ---
-name: ecco9
-description: ecco9 cognitive hardware platform - virtual device architecture and implementation
+name: ecco9ext
+description: ecco9 extended cognitive hardware platform - virtual device architecture and implementation
 ---
 
-# ecco9: Cognitive Hardware Platform
+# ecco9ext: extended Cognitive Hardware Platform
 
 ## Overview
 

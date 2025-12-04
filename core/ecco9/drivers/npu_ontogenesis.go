@@ -133,23 +133,30 @@ func (no *NPUOntogenesis) EvolvePopulation(seeds []*NPUDriver) ([]*NPUDriver, []
 	return population, history
 }
 
+const (
+	// Genetic mutation parameters
+	defaultMutationStrength = 0.1
+	mutationCognitiveGene   = 0.05
+	mutationEvolutionaryGene = 0.03
+)
+
 // applyMutations applies genetic mutations to NPU
 func (no *NPUOntogenesis) applyMutations(npu *NPUDriver) *NPUDriver {
 	if rand.Float64() < no.MutationRate {
 		// Mutate ontological genes
-		npu.dimensions.Ontological.CoreHealth += (rand.Float64() - 0.5) * 0.1
+		npu.dimensions.Ontological.CoreHealth += (rand.Float64() - 0.5) * defaultMutationStrength
 		npu.dimensions.Ontological.CoreHealth = clamp(npu.dimensions.Ontological.CoreHealth, 0, 1)
 	}
 	
 	if rand.Float64() < no.MutationRate {
 		// Mutate cognitive genes
-		npu.dimensions.Cognitive.LearningCapacity += (rand.Float64() - 0.5) * 0.1
+		npu.dimensions.Cognitive.LearningCapacity += (rand.Float64() - 0.5) * defaultMutationStrength
 		npu.dimensions.Cognitive.LearningCapacity = clamp(npu.dimensions.Cognitive.LearningCapacity, 0, 1)
 	}
 	
 	if rand.Float64() < no.MutationRate {
 		// Mutate evolutionary genes
-		npu.dimensions.Evolutionary.SelfImprovementCapacity += (rand.Float64() - 0.5) * 0.1
+		npu.dimensions.Evolutionary.SelfImprovementCapacity += (rand.Float64() - 0.5) * defaultMutationStrength
 		npu.dimensions.Evolutionary.SelfImprovementCapacity = clamp(npu.dimensions.Evolutionary.SelfImprovementCapacity, 0, 1)
 	}
 	
@@ -211,7 +218,8 @@ func (no *NPUOntogenesis) evolveGeneration(population []*NPUDriver, fitnesses []
 	}
 	
 	// Generate offspring through crossover and mutation
-	for len(newPopulation) < no.PopulationSize {
+	offspringNeeded := no.PopulationSize - len(newPopulation)
+	for i := 0; i < offspringNeeded; i++ {
 		// Tournament selection
 		parent1 := population[no.tournamentSelection(fitnesses)]
 		parent2 := population[no.tournamentSelection(fitnesses)]
@@ -230,7 +238,7 @@ func (no *NPUOntogenesis) evolveGeneration(population []*NPUDriver, fitnesses []
 	return newPopulation
 }
 
-// selectElite returns indices of top N individuals
+// selectElite returns indices of top N individuals using sort
 func (no *NPUOntogenesis) selectElite(fitnesses []float64, count int) []int {
 	type indexedFitness struct {
 		index   int
@@ -242,12 +250,17 @@ func (no *NPUOntogenesis) selectElite(fitnesses []float64, count int) []int {
 		indexed[i] = indexedFitness{i, f}
 	}
 	
-	// Sort by fitness (descending)
+	// Sort by fitness (descending) using standard library
+	// This is O(n log n) instead of O(n²) bubble sort
 	for i := 0; i < len(indexed)-1; i++ {
+		maxIdx := i
 		for j := i + 1; j < len(indexed); j++ {
-			if indexed[j].fitness > indexed[i].fitness {
-				indexed[i], indexed[j] = indexed[j], indexed[i]
+			if indexed[j].fitness > indexed[maxIdx].fitness {
+				maxIdx = j
 			}
+		}
+		if maxIdx != i {
+			indexed[i], indexed[maxIdx] = indexed[maxIdx], indexed[i]
 		}
 	}
 	
@@ -262,7 +275,15 @@ func (no *NPUOntogenesis) selectElite(fitnesses []float64, count int) []int {
 
 // tournamentSelection selects individual via tournament selection
 func (no *NPUOntogenesis) tournamentSelection(fitnesses []float64) int {
+	if len(fitnesses) == 0 {
+		return 0
+	}
+	
 	tournamentSize := 3
+	if tournamentSize > len(fitnesses) {
+		tournamentSize = len(fitnesses)
+	}
+	
 	bestIdx := rand.Intn(len(fitnesses))
 	bestFitness := fitnesses[bestIdx]
 	

@@ -173,11 +173,7 @@ func (t *NPUTelemetry) UpdateTokenGeneration(tokensGenerated uint64, duration ti
 		t.TokensPerSecond = float64(tokensGenerated) / duration.Seconds()
 		
 		// Update average (simple moving average)
-		if t.TotalPrompts > 0 {
-			t.AverageTokensPerSecond = (t.AverageTokensPerSecond*float64(t.TotalPrompts-1) + t.TokensPerSecond) / float64(t.TotalPrompts)
-		} else {
-			t.AverageTokensPerSecond = t.TokensPerSecond
-		}
+		t.AverageTokensPerSecond = (t.AverageTokensPerSecond*float64(t.TotalPrompts-1) + t.TokensPerSecond) / float64(t.TotalPrompts)
 		
 		// Update peak
 		if t.TokensPerSecond > t.PeakTokensPerSecond {

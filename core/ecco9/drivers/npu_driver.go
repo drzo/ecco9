@@ -435,12 +435,14 @@ func (d *NPUDevice) GetState() (ecco9.DeviceState, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	
-	// Update uptime
+	// Update uptime - calculate from initialization time, not last update
 	if d.initialized {
 		d.state.Uptime = time.Since(d.state.LastUpdate)
 	}
 	
-	return d.state, nil
+	// Make a copy to return
+	stateCopy := d.state
+	return stateCopy, nil
 }
 
 // SetState implements CognitiveDevice.SetState
@@ -463,9 +465,10 @@ func (d *NPUDevice) Read(buffer []byte) (int, error) {
 	if d.registers.TokenReady > 0 {
 		// Simulated token read
 		token := d.registers.TokenOut
-		copy(buffer, []byte(fmt.Sprintf("%d\n", token)))
+		formatted := fmt.Sprintf("%d\n", token)
+		n := copy(buffer, []byte(formatted))
 		d.registers.TokenReady = 0
-		return len(buffer), nil
+		return n, nil
 	}
 	
 	return 0, nil
